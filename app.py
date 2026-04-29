@@ -19,7 +19,7 @@ def get_gemini():
     if not api_key:
         raise Exception('Service not configured. Contact admin.')
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel('gemini-1.5-flash')
+    return genai.GenerativeModel('gemini-2.0-flash')
 
 # ── PDF TEXT EXTRACTION ──
 def extract_text_from_pdf(pdf_path):
