@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ASHLYSIS — Exam Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -31,51 +31,56 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 4
 .nav-right{display:flex;align-items:center;gap:12px}
 .nav-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;border:1px solid var(--border);padding:5px 12px;border-radius:2px}
 .nav-badge{font-family:'JetBrains Mono',monospace;font-size:9px;background:var(--greendim);color:var(--green);border:1px solid rgba(46,204,113,0.2);padding:4px 10px;border-radius:2px;letter-spacing:0.1em;text-transform:uppercase}
+.nav-user{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--orange);display:none}
+
+/* NAME GATE */
+.name-gate{position:fixed;inset:0;background:rgba(8,8,16,0.98);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px)}
+.name-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:48px;max-width:440px;width:90%;text-align:center;position:relative;overflow:hidden}
+.name-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--purple))}
+.name-logo{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:0.1em;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px}
+.name-sub{font-size:13px;color:var(--mutedbr);margin-bottom:32px;line-height:1.6}
+.name-input-wrap{position:relative;margin-bottom:16px}
+.name-input{width:100%;background:var(--bg3);border:1px solid var(--borderhi);border-radius:6px;padding:14px 18px;color:var(--text);font-family:'Barlow',sans-serif;font-size:16px;font-weight:500;outline:none;transition:border-color 0.2s;text-align:center}
+.name-input:focus{border-color:var(--orange)}
+.name-input::placeholder{color:var(--muted)}
+.name-btn{width:100%;padding:14px;background:var(--orange);color:#000;border:none;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;margin-top:8px}
+.name-btn:hover{background:#ff7722;transform:translateY(-1px);box-shadow:0 8px 24px var(--orangeglow)}
+.name-hint{font-size:11px;color:var(--muted);margin-top:12px;font-family:'JetBrains Mono',monospace}
 
 /* HERO */
-.hero{padding:70px 40px 50px;position:relative;overflow:hidden}
+.hero{padding:60px 40px 40px;position:relative;overflow:hidden}
 .hero-glow{position:absolute;top:-150px;right:-100px;width:500px;height:500px;background:radial-gradient(circle,var(--orangeglow) 0%,transparent 65%);pointer-events:none}
-.hero-glow2{position:absolute;bottom:-100px;left:-100px;width:400px;height:400px;background:radial-gradient(circle,var(--purpledim) 0%,transparent 65%);pointer-events:none}
 .eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--orange);letter-spacing:0.22em;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:12px}
 .eyebrow::before{content:'';width:28px;height:1px;background:var(--orange)}
-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(64px,11vw,130px);line-height:0.88;letter-spacing:0.02em;margin-bottom:28px}
+h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,10vw,120px);line-height:0.88;letter-spacing:0.02em;margin-bottom:24px}
 h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
-.hero-sub{font-size:17px;font-weight:300;color:var(--mutedbr);max-width:520px;line-height:1.75;margin-bottom:36px;border-left:2px solid var(--orange);padding-left:18px}
+.hero-sub{font-size:16px;font-weight:300;color:var(--mutedbr);max-width:500px;line-height:1.75;margin-bottom:32px;border-left:2px solid var(--orange);padding-left:18px}
 .feature-pills{display:flex;flex-wrap:wrap;gap:8px}
 .pill{font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;border:1px solid}
 .pill-orange{color:var(--orange);border-color:rgba(255,92,0,0.3);background:var(--orangedim)}
 .pill-purple{color:var(--purple);border-color:rgba(124,92,252,0.3);background:var(--purpledim)}
 .pill-green{color:var(--green);border-color:rgba(46,204,113,0.3);background:var(--greendim)}
 .pill-blue{color:var(--blue);border-color:rgba(52,152,219,0.3);background:var(--bluedim)}
+.pill-yellow{color:var(--yellow);border-color:rgba(241,196,15,0.3);background:var(--yellowdim)}
 
-/* UPLOAD SECTION */
+/* UPLOAD */
 .upload-wrap{padding:0 40px 60px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
 .upload-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:32px;position:relative;overflow:hidden}
 .upload-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--purple))}
 .card-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.06em;margin-bottom:6px}
 .card-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:24px}
-
-/* DROPZONE */
 .dropzone{border:1.5px dashed var(--borderhi);border-radius:6px;padding:36px 20px;text-align:center;cursor:pointer;transition:all 0.25s;background:var(--bg3);position:relative;overflow:hidden;margin-bottom:16px}
 .dropzone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--orangedim),transparent 70%);opacity:0;transition:opacity 0.3s;pointer-events:none}
-.dropzone:hover,.dropzone.over{border-color:var(--orange)}
-.dropzone:hover::before,.dropzone.over::before{opacity:1}
+.dropzone:hover,.dropzone.over{border-color:var(--orange)}.dropzone:hover::before,.dropzone.over::before{opacity:1}
 .dz-emoji{font-size:32px;margin-bottom:12px;display:block}
 .dz-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.04em;margin-bottom:6px}
-.dz-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
-.dz-sub b{color:var(--orange);font-weight:500}
+.dz-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}.dz-sub b{color:var(--orange);font-weight:500}
 #fileinput{display:none}
-
-/* FILE LIST */
 .filelist{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
 .fileitem{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:'JetBrains Mono',monospace;animation:popIn 0.2s ease}
 @keyframes popIn{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
-.ficon{color:var(--orange)}.fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fsize{color:var(--muted);font-size:10px}
-.fremove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;transition:color 0.15s;padding:2px}
-.fremove:hover{color:var(--red)}
-
-/* INFO CARD */
+.ficon{color:var(--orange)}.fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsize{color:var(--muted);font-size:10px}
+.fremove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;transition:color 0.15s;padding:2px}.fremove:hover{color:var(--red)}
 .info-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:32px;position:relative;overflow:hidden}
 .info-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--blue))}
 .how-steps{display:flex;flex-direction:column;gap:20px;margin-top:8px}
@@ -87,8 +92,6 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .feat{background:var(--bg3);padding:16px;text-align:center}
 .feat-icon{font-size:20px;margin-bottom:6px;display:block}
 .feat-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mutedbr);letter-spacing:0.1em;text-transform:uppercase}
-
-/* BUTTON */
 .btn{width:100%;padding:15px;background:var(--orange);color:#000;border:none;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
 .btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent 50%)}
 .btn:hover:not(:disabled){background:#ff7722;transform:translateY(-1px);box-shadow:0 10px 32px var(--orangeglow)}
@@ -96,13 +99,14 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .errbox{display:none;margin-top:12px;background:var(--reddim);border:1px solid rgba(231,76,60,0.25);border-radius:4px;padding:12px 14px;font-size:12px;color:#e88;font-family:'JetBrains Mono',monospace;line-height:1.6}
 .errbox.on{display:block}
 
-/* LOADING OVERLAY */
+/* LOADING */
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,8,16,0.96);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:28px;text-align:center}
 .loading-overlay.on{display:flex}
 .load-orb{width:70px;height:70px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--orange);border-right-color:var(--purple);animation:spin 1s linear infinite;position:relative}
 .load-orb::after{content:'';position:absolute;inset:8px;border-radius:50%;border:1px solid var(--border);border-bottom-color:var(--orange2);animation:spin 0.6s linear infinite reverse}
 @keyframes spin{to{transform:rotate(360deg)}}
 .load-title{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:0.06em}
+.load-name{font-size:14px;color:var(--orange);font-family:'JetBrains Mono',monospace;margin-top:-16px}
 .load-subtitle{font-size:13px;color:var(--mutedbr);font-family:'JetBrains Mono',monospace}
 .load-steps{display:flex;flex-direction:column;gap:10px;max-width:300px;width:100%;margin-top:8px}
 .lstep{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-align:left}
@@ -113,29 +117,33 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .load-bar{height:100%;background:linear-gradient(90deg,var(--orange),var(--purple));width:0%;transition:width 0.5s ease;border-radius:1px}
 
 /* RESULTS */
-.results{display:none;padding:0 40px 80px}
-.results.on{display:block}
-.tabs-wrap{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:36px;position:sticky;top:61px;z-index:50;background:rgba(8,8,16,0.95);backdrop-filter:blur(12px);padding-top:20px}
-.tab{padding:12px 24px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.08em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-top:none;border-left:none;border-right:none;display:flex;align-items:center;gap:8px}
+.results{display:none;padding:0 40px 80px}.results.on{display:block}
+.tabs-wrap{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:36px;position:sticky;top:61px;z-index:50;background:rgba(8,8,16,0.95);backdrop-filter:blur(12px);padding-top:20px;overflow-x:auto}
+.tab{padding:12px 20px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.08em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-top:none;border-left:none;border-right:none;display:flex;align-items:center;gap:8px;white-space:nowrap}
 .tab:hover{color:var(--text)}.tab.active{color:var(--orange);border-bottom-color:var(--orange)}
 .tab-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;background:var(--orangedim);color:var(--orange)}
 .results-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap}
-.results-title{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:0.03em;line-height:1;margin-bottom:6px}
+.results-title{font-family:'Bebas Neue',sans-serif;font-size:38px;letter-spacing:0.03em;line-height:1;margin-bottom:4px}
+.results-greeting{font-size:14px;color:var(--orange);font-family:'JetBrains Mono',monospace;margin-bottom:4px}
 .results-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
 .btn-row{display:flex;gap:10px;flex-wrap:wrap}
 .btn-sm{padding:9px 18px;background:transparent;border:1px solid var(--borderhi);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
 .btn-sm:hover{border-color:var(--orange);color:var(--orange)}
-.btn-sm.primary{background:var(--orange);color:#000;border-color:var(--orange)}
-.btn-sm.primary:hover{background:#ff7722}
-
-/* STAT STRIP */
+.btn-sm.primary{background:var(--orange);color:#000;border-color:var(--orange)}.btn-sm.primary:hover{background:#ff7722}
 .stat-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:32px}
 .scard{background:var(--bg2);padding:16px 14px}
 .scard-num{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1;color:var(--orange);margin-bottom:3px}
 .scard-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
-
-/* TAB PANELS */
 .tab-panel{display:none}.tab-panel.active{display:block}
+
+/* PAPER PATTERN */
+.pattern-card{background:var(--bg2);border:1px solid rgba(124,92,252,0.3);border-radius:8px;padding:24px;margin-bottom:24px;border-left:3px solid var(--purple)}
+.pattern-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.05em;color:var(--purple);margin-bottom:16px}
+.pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.pstat{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:14px}
+.pstat-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px}
+.pstat-value{font-size:13px;color:var(--text);line-height:1.5}
+.insight-box{background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:12px;color:var(--purple);font-family:'JetBrains Mono',monospace;line-height:1.6}
 
 /* CLUSTER CARDS */
 .clusters{display:flex;flex-direction:column;gap:10px}
@@ -144,21 +152,31 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .ccard:hover{border-color:var(--borderhi)}
 .ccard.HIGH{border-left:3px solid var(--red)}.ccard.MEDIUM{border-left:3px solid var(--yellow)}.ccard.LOW{border-left:3px solid var(--green)}
 .chead{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none}
-.cfreq{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;min-width:50px;text-align:center}
+.cfreq-wrap{display:flex;flex-direction:column;align-items:center;min-width:56px}
+.cfreq{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1}
+.cfreq-label{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em}
 .ccard.HIGH .cfreq{color:var(--red)}.ccard.MEDIUM .cfreq{color:var(--yellow)}.ccard.LOW .cfreq{color:var(--green)}
 .cinfo{flex:1}
-.ctopic{font-size:15px;font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.05em}
-.cmeta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap}
-.cbadge{padding:3px 9px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase}
+.ctopic{font-size:15px;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
+.cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.cmeta-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px}
+.cmeta-tag.pos{background:var(--purpledim);color:var(--purple)}
+.cmeta-tag.marks{background:var(--bluedim);color:var(--blue)}
+.cmeta-tag.consistent{background:var(--greendim);color:var(--green)}
+.cpapers{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+.cbadge{padding:3px 9px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0}
 .cbadge.HIGH{background:var(--reddim);color:var(--red)}.cbadge.MEDIUM{background:var(--yellowdim);color:var(--yellow)}.cbadge.LOW{background:var(--greendim);color:var(--green)}
 .cchev{color:var(--muted);font-size:12px;transition:transform 0.2s;flex-shrink:0}
 .ccard.open .cchev{transform:rotate(90deg)}
-.cbody{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}
-.ccard.open .cbody{display:block}
-.ctip{display:flex;gap:10px;align-items:flex-start;background:var(--orangedim);border:1px solid rgba(255,92,0,0.18);border-radius:4px;padding:10px 14px;margin:14px 0;font-size:12px;line-height:1.6;font-style:italic;color:var(--orange2)}
+.cbody{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}.ccard.open .cbody{display:block}
+.pattern-note{background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:4px;padding:8px 12px;margin:12px 0;font-size:11px;color:var(--purple);font-family:'JetBrains Mono',monospace}
+.ctip{display:flex;gap:10px;align-items:flex-start;background:var(--orangedim);border:1px solid rgba(255,92,0,0.18);border-radius:4px;padding:10px 14px;margin:8px 0;font-size:12px;line-height:1.6;font-style:italic;color:var(--orange2)}
 .qlist{display:flex;flex-direction:column;gap:6px}
 .qitem{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:12px 14px}
-.qtag{display:inline-block;background:var(--bg4);border:1px solid var(--border);border-radius:2px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:5px}
+.qitem-head{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.qtag{display:inline-block;background:var(--bg4);border:1px solid var(--border);border-radius:2px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
+.qpos{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;background:var(--purpledim);color:var(--purple)}
+.qmarks{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;background:var(--bluedim);color:var(--blue)}
 .qtext{font-size:13px;line-height:1.65;color:var(--text)}
 
 /* PREDICTIONS */
@@ -166,14 +184,15 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .pcard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:20px;animation:slideUp 0.3s ease both;position:relative;overflow:hidden}
 .pcard::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px}
 .pcard.HIGH::before{background:var(--red)}.pcard.MEDIUM::before{background:var(--yellow)}.pcard.LOW::before{background:var(--green)}
-.pcard-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.pcard-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:10px}
 .pcard-num{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--muted);line-height:1;min-width:32px}
 .pcard-q{font-size:14px;font-weight:600;line-height:1.6;flex:1}
-.pcard-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pcard-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .pmeta-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 9px;border-radius:2px;letter-spacing:0.08em;text-transform:uppercase}
 .pmeta-tag.conf-HIGH{background:var(--reddim);color:var(--red)}.pmeta-tag.conf-MEDIUM{background:var(--yellowdim);color:var(--yellow)}.pmeta-tag.conf-LOW{background:var(--greendim);color:var(--green)}
-.pmeta-tag.type-tag{background:var(--purpledim);color:var(--purple)}
-.pmeta-tag.freq-tag{background:var(--bluedim);color:var(--blue)}
+.pmeta-tag.pos-tag{background:var(--purpledim);color:var(--purple)}
+.pmeta-tag.marks-tag{background:var(--bluedim);color:var(--blue)}
+.pmeta-tag.topic-tag{background:var(--orangedim);color:var(--orange)}
 .preason{font-size:11px;color:var(--mutedbr);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-style:italic;font-family:'JetBrains Mono',monospace}
 
 /* STUDY PLAN */
@@ -189,15 +208,12 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .day-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;animation:slideUp 0.3s ease both}
 .day-head{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;user-select:none}
 .day-num{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted);min-width:60px}
-.day-info{flex:1}
-.day-focus{font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px}
+.day-info{flex:1}.day-focus{font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px}
 .day-hrs{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
 .day-badge{padding:3px 9px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:0.08em}
 .day-badge.HIGH{background:var(--reddim);color:var(--red)}.day-badge.MEDIUM{background:var(--yellowdim);color:var(--yellow)}.day-badge.LOW{background:var(--greendim);color:var(--green)}
-.day-chev{color:var(--muted);font-size:11px;transition:transform 0.2s}
-.day-card.open .day-chev{transform:rotate(90deg)}
-.day-body{display:none;padding:0 18px 16px;border-top:1px solid var(--border)}
-.day-card.open .day-body{display:block}
+.day-chev{color:var(--muted);font-size:11px;transition:transform 0.2s}.day-card.open .day-chev{transform:rotate(90deg)}
+.day-body{display:none;padding:0 18px 16px;border-top:1px solid var(--border)}.day-card.open .day-body{display:block}
 .day-tasks{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 .dtask{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:1.5;color:var(--mutedbr)}
 .dtask::before{content:'✓';color:var(--green);font-size:11px;flex-shrink:0;margin-top:1px}
@@ -205,52 +221,62 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .ds-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--red);letter-spacing:0.05em;margin-bottom:8px}
 .ds-tags{display:flex;flex-wrap:wrap;gap:6px}
 .ds-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:4px 10px;background:rgba(231,76,60,0.08);color:var(--red);border-radius:2px}
-
 .reset-wrap{text-align:center;margin-top:40px}
 .reset-btn{padding:10px 24px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s}
 .reset-btn:hover{color:var(--text);border-color:var(--borderhi)}
-
 footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
 .foot-logo{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.1em;color:var(--muted)}
 .foot-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
-
 @media(max-width:900px){
-  .upload-wrap{grid-template-columns:1fr;padding:0 20px 40px}
-  .hero{padding:40px 20px 36px}h1{font-size:clamp(52px,14vw,90px)}
-  nav{padding:14px 20px}.results{padding:0 20px 60px}
+  .upload-wrap{grid-template-columns:1fr;padding:0 20px 40px}.hero{padding:40px 20px 32px}
+  h1{font-size:clamp(48px,13vw,80px)}nav{padding:14px 20px}.results{padding:0 20px 60px}
   .stat-strip{grid-template-columns:repeat(3,1fr)}.plan-top{grid-template-columns:1fr}
-  .feat-grid{grid-template-columns:repeat(2,1fr)}footer{padding:20px}
-  .tabs-wrap{overflow-x:auto}.tab{font-size:13px;padding:10px 16px}
+  .feat-grid{grid-template-columns:repeat(2,1fr)}footer{padding:20px}.name-box{padding:32px 24px}
 }
 </style>
 </head>
 <body>
 
+<!-- NAME GATE -->
+<div class="name-gate" id="nameGate">
+  <div class="name-box">
+    <div class="name-logo"><span class="logo-dot"></span>ASHLYSIS</div>
+    <p class="name-sub">Enter your name to get a personalized exam analysis and study plan.</p>
+    <div class="name-input-wrap">
+      <input class="name-input" id="nameInput" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
+    </div>
+    <button class="name-btn" onclick="submitName()">LET'S CRACK IT →</button>
+    <p class="name-hint">No account needed · Free forever · Your data stays private</p>
+  </div>
+</div>
+
 <nav>
   <div class="logo"><span class="logo-dot"></span>ASHLYSIS</div>
   <div class="nav-right">
-    <span class="nav-badge">No Login Required</span>
+    <span class="nav-user" id="navUser"></span>
+    <span class="nav-badge">Free · No Login</span>
     <span class="nav-tag">Exam Intelligence</span>
   </div>
 </nav>
 
 <section class="hero">
-  <div class="hero-glow"></div><div class="hero-glow2"></div>
+  <div class="hero-glow"></div>
   <div class="eyebrow">Smart PYQ Analysis</div>
   <h1>CRACK THE<br><span class="outline">PATTERN.</span></h1>
-  <p class="hero-sub">Upload your previous year papers. ASHLYSIS finds which questions keep repeating, predicts what's coming next, and builds your personal 7-day study plan — instantly.</p>
+  <p class="hero-sub">Upload your previous year papers. ASHLYSIS finds which questions repeat, which question number they appear in, how many marks they carry — and predicts what's coming next.</p>
   <div class="feature-pills">
     <span class="pill pill-orange">🔍 Repeat Detection</span>
-    <span class="pill pill-purple">🔮 Question Prediction</span>
-    <span class="pill pill-green">📅 7-Day Study Plan</span>
-    <span class="pill pill-blue">📊 Priority Ranking</span>
+    <span class="pill pill-purple">📍 Question Position</span>
+    <span class="pill pill-blue">📝 Marks Pattern</span>
+    <span class="pill pill-green">🔮 Predictions</span>
+    <span class="pill pill-yellow">📅 Study Plan</span>
   </div>
 </section>
 
 <div class="upload-wrap" id="uploadWrap">
   <div class="upload-card">
     <div class="card-title">Upload PYQ Papers</div>
-    <div class="card-sub">// 2–10 papers · PDF only · no login needed</div>
+    <div class="card-sub">// 2–10 papers · PDF only · latest paper first</div>
     <div class="dropzone" id="dz" onclick="document.getElementById('fileinput').click()">
       <span class="dz-emoji">📄</span>
       <div class="dz-title">Drop PDF Papers Here</div>
@@ -263,38 +289,38 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   </div>
 
   <div class="info-card">
-    <div class="card-title">How It Works</div>
-    <div class="card-sub">// upload · analyze · study smart</div>
+    <div class="card-title">What You Get</div>
+    <div class="card-sub">// the smart student's edge</div>
     <div class="how-steps">
       <div class="hstep">
         <div class="hstep-num">01</div>
         <div>
-          <div class="hstep-title">Upload Your Papers</div>
-          <div class="hstep-desc">Add 2–10 previous year question papers as PDFs. More papers = better pattern detection.</div>
+          <div class="hstep-title">Repeat Questions Ranked</div>
+          <div class="hstep-desc">Every repeating topic ranked by how many times it appeared. See which question number (Q1, Q2...) and how many marks it carried each time.</div>
         </div>
       </div>
       <div class="hstep">
         <div class="hstep-num">02</div>
         <div>
-          <div class="hstep-title">Smart Analysis</div>
-          <div class="hstep-desc">ASHLYSIS reads every question and finds which topics keep appearing across years — even if worded differently.</div>
+          <div class="hstep-title">Paper Pattern Analysis</div>
+          <div class="hstep-desc">Understand the paper structure — compulsory questions, optional questions, mark distribution, and key patterns across years.</div>
         </div>
       </div>
       <div class="hstep">
         <div class="hstep-num">03</div>
         <div>
-          <div class="hstep-title">Get Full Intelligence</div>
-          <div class="hstep-desc">Ranked repeats, predicted questions, a 7-day study plan, and a downloadable report — all free.</div>
+          <div class="hstep-title">Predictions + Study Plan</div>
+          <div class="hstep-desc">AI predicts next exam questions with likely position and marks. Get a personalized 7-day study plan based on your papers.</div>
         </div>
       </div>
     </div>
     <div class="feat-grid">
-      <div class="feat"><span class="feat-icon">🔁</span><div class="feat-label">Repeat Finder</div></div>
-      <div class="feat"><span class="feat-icon">🔮</span><div class="feat-label">AI Predictor</div></div>
-      <div class="feat"><span class="feat-icon">📅</span><div class="feat-label">Study Plan</div></div>
-      <div class="feat"><span class="feat-icon">⭐</span><div class="feat-label">Priority Rank</div></div>
-      <div class="feat"><span class="feat-icon">💡</span><div class="feat-label">Exam Tips</div></div>
-      <div class="feat"><span class="feat-icon">📥</span><div class="feat-label">Export Report</div></div>
+      <div class="feat"><span class="feat-icon">🔁</span><div class="feat-label">Repeats</div></div>
+      <div class="feat"><span class="feat-icon">📍</span><div class="feat-label">Position</div></div>
+      <div class="feat"><span class="feat-icon">📝</span><div class="feat-label">Marks</div></div>
+      <div class="feat"><span class="feat-icon">🔮</span><div class="feat-label">Predict</div></div>
+      <div class="feat"><span class="feat-icon">📊</span><div class="feat-label">Pattern</div></div>
+      <div class="feat"><span class="feat-icon">📅</span><div class="feat-label">Plan</div></div>
     </div>
   </div>
 </div>
@@ -303,13 +329,14 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
 <div class="loading-overlay" id="loadingOverlay">
   <div class="load-orb"></div>
   <div class="load-title">ANALYZING PAPERS</div>
+  <div class="load-name" id="loadName"></div>
   <div class="load-subtitle" id="loadSub">Reading your question papers...</div>
   <div class="load-steps">
     <div class="lstep" id="ls1"><span class="lstep-dot"></span>Extracting questions from PDFs</div>
-    <div class="lstep" id="ls2"><span class="lstep-dot"></span>Finding repeat patterns</div>
-    <div class="lstep" id="ls3"><span class="lstep-dot"></span>Predicting next exam questions</div>
-    <div class="lstep" id="ls4"><span class="lstep-dot"></span>Building your study plan</div>
-    <div class="lstep" id="ls5"><span class="lstep-dot"></span>Preparing your report</div>
+    <div class="lstep" id="ls2"><span class="lstep-dot"></span>Finding repeat patterns + positions</div>
+    <div class="lstep" id="ls3"><span class="lstep-dot"></span>Analyzing marks & paper structure</div>
+    <div class="lstep" id="ls4"><span class="lstep-dot"></span>Predicting next exam questions</div>
+    <div class="lstep" id="ls5"><span class="lstep-dot"></span>Building your personal study plan</div>
   </div>
   <div class="load-progress"><div class="load-bar" id="loadBar"></div></div>
 </div>
@@ -318,6 +345,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
 <section class="results" id="results">
   <div class="results-head">
     <div>
+      <div class="results-greeting" id="resultsGreeting"></div>
       <div class="results-title">ANALYSIS COMPLETE</div>
       <div class="results-meta" id="resultsMeta"></div>
     </div>
@@ -330,7 +358,8 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="stat-strip" id="statStrip"></div>
 
   <div class="tabs-wrap">
-    <button class="tab active" onclick="switchTab('repeats',this)">🔁 REPEAT QUESTIONS <span class="tab-badge" id="tb1">0</span></button>
+    <button class="tab active" onclick="switchTab('repeats',this)">🔁 REPEATS <span class="tab-badge" id="tb1">0</span></button>
+    <button class="tab" onclick="switchTab('pattern',this)">📊 PAPER PATTERN</button>
     <button class="tab" onclick="switchTab('predictions',this)">🔮 PREDICTIONS <span class="tab-badge" id="tb2">0</span></button>
     <button class="tab" onclick="switchTab('studyplan',this)">📅 STUDY PLAN</button>
   </div>
@@ -339,9 +368,13 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
     <div class="clusters" id="clusterList"></div>
   </div>
 
+  <div class="tab-panel" id="panel-pattern">
+    <div id="patternContent"></div>
+  </div>
+
   <div class="tab-panel" id="panel-predictions">
     <div style="background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:6px;padding:14px 18px;margin-bottom:20px;font-size:12px;color:var(--purple);font-family:'JetBrains Mono',monospace;line-height:1.7">
-      ⚡ Predicted based on repeat patterns in your papers. HIGH = very likely to appear. Use for final revision.
+      ⚡ Predicted based on repeat patterns. Includes likely question position and marks.
     </div>
     <div class="pred-grid" id="predList"></div>
   </div>
@@ -359,12 +392,29 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
 
 <footer>
   <span class="foot-logo">ASHLYSIS</span>
-  <span class="foot-meta">Built for engineers who study smart &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; No login required</span>
+  <span class="foot-meta">Built for engineers who study smart &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; Powered by Groq AI</span>
 </footer>
 
 <script>
-let files = [], lastData = null;
+let files = [], lastData = null, userName = '';
 
+// ── NAME GATE ──
+document.getElementById('nameInput').addEventListener('keypress', e => {
+  if (e.key === 'Enter') submitName();
+});
+
+function submitName() {
+  const val = document.getElementById('nameInput').value.trim();
+  if (!val) { document.getElementById('nameInput').style.borderColor = 'var(--red)'; return; }
+  userName = val;
+  document.getElementById('nameGate').style.opacity = '0';
+  document.getElementById('nameGate').style.transition = 'opacity 0.4s';
+  setTimeout(() => { document.getElementById('nameGate').style.display = 'none'; }, 400);
+  document.getElementById('navUser').textContent = `👋 ${userName}`;
+  document.getElementById('navUser').style.display = 'block';
+}
+
+// ── DRAG & DROP ──
 const dz = document.getElementById('dz');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
@@ -381,11 +431,12 @@ function renderFiles() {
 }
 function updateBtn() { document.getElementById('analyzeBtn').disabled = files.length < 2; }
 
+// ── ANALYZE ──
 async function startAnalysis() {
   hideErr(); showLoading();
   const steps = ['ls1','ls2','ls3','ls4','ls5'];
-  const subs = ['Reading your question papers...','Detecting repeat patterns...','Predicting exam questions...','Building your study plan...','Almost done...'];
-  const progs = [10,30,55,75,90];
+  const subs = ['Reading your question papers...','Finding repeat patterns & positions...','Analyzing marks & paper structure...','Predicting exam questions...','Building your study plan...'];
+  const progs = [10, 30, 55, 75, 90];
   let si = 0;
   const iv = setInterval(() => {
     if (si > 0) { document.getElementById(steps[si-1]).classList.remove('active'); document.getElementById(steps[si-1]).classList.add('done'); }
@@ -394,6 +445,8 @@ async function startAnalysis() {
 
   const fd = new FormData();
   files.forEach(f => fd.append('files', f));
+  fd.append('user_name', userName);
+
   try {
     const res = await fetch('/analyze', { method: 'POST', body: fd });
     clearInterval(iv);
@@ -407,53 +460,105 @@ async function startAnalysis() {
   } catch(e) { clearInterval(iv); showErr('Network error. Please try again.'); hideLoading(); }
 }
 
+// ── SHOW RESULTS ──
 function showResults(data) {
-  const { clusters, predictions, study_plan, stats } = data;
-  document.getElementById('resultsMeta').textContent = `${stats.papers} papers · ${stats.total_questions} questions · ${stats.clusters} repeat patterns · ${predictions?.length||0} predictions`;
+  const { clusters, predictions, study_plan, paper_pattern, stats, user_name } = data;
+
+  document.getElementById('resultsGreeting').textContent = `Hey ${user_name} 👋 — here's your personalized analysis`;
+  document.getElementById('resultsMeta').textContent = `${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions?.length||0} predictions`;
 
   document.getElementById('statStrip').innerHTML = [
-    [stats.papers,'Papers'],[stats.total_questions,'Questions'],
-    [stats.clusters,'Repeats'],[stats.high_priority,'HIGH Priority'],[predictions?.length||0,'Predictions']
+    [stats.papers,'Papers'],[stats.clusters,'Repeats'],
+    [stats.high_priority,'HIGH Priority'],[predictions?.length||0,'Predictions'],
+    [clusters.filter(c=>c.consistent_position).length,'Same Position Always']
   ].map(([n,l]) => `<div class="scard"><div class="scard-num">${n}</div><div class="scard-lbl">${l}</div></div>`).join('');
 
   document.getElementById('tb1').textContent = clusters.length;
   document.getElementById('tb2').textContent = predictions?.length||0;
 
-  document.getElementById('clusterList').innerHTML = clusters.map((c,i) => `
+  // Clusters with position + marks
+  document.getElementById('clusterList').innerHTML = clusters.map((c,i) => {
+    const positions = c.question_positions || [];
+    const marks = c.marks_each_time || [];
+    const papers = c.papers || [];
+    const consistentPos = c.consistent_position;
+    const consistentMarks = c.consistent_marks;
+
+    return `
     <div class="ccard ${c.importance}" id="cc${i}" style="animation-delay:${i*0.04}s">
       <div class="chead" onclick="tog('cc${i}')">
-        <div class="cfreq">${c.frequency}<span style="font-size:13px;font-family:'Barlow',sans-serif;font-weight:300">×</span></div>
+        <div class="cfreq-wrap">
+          <div class="cfreq">${c.frequency}</div>
+          <div class="cfreq-label">times</div>
+        </div>
         <div class="cinfo">
           <div class="ctopic">${c.topic}</div>
-          <div class="cmeta"><span>📄 ${(c.papers||[]).join(' · ')}</span>${c.keywords?.length?`<span>🔑 ${c.keywords.join(', ')}</span>`:''}</div>
+          <div class="cmeta">
+            ${positions.length ? `<span class="cmeta-tag pos">📍 ${[...new Set(positions)].join(', ')}${consistentPos?' ✓':''}</span>` : ''}
+            ${marks.filter(m=>m>0).length ? `<span class="cmeta-tag marks">📝 ${[...new Set(marks.filter(m=>m>0))].join('/')} marks${consistentMarks?' ✓':''}</span>` : ''}
+            ${consistentPos ? `<span class="cmeta-tag consistent">Always same position</span>` : ''}
+          </div>
+          <div class="cpapers">📄 ${papers.join(' · ')}</div>
         </div>
         <span class="cbadge ${c.importance}">${c.importance}</span>
         <span class="cchev">▶</span>
       </div>
       <div class="cbody">
-        ${c.tip?`<div class="ctip"><span>💡</span><span>${c.tip}</span></div>`:''}
-        <div class="qlist">${(c.questions||[]).map((q,qi)=>`
-          <div class="qitem"><div class="qtag">${(c.papers||[])[qi]||'PAPER '+(qi+1)}</div><div class="qtext">${q}</div></div>`).join('')}
+        ${c.pattern_note ? `<div class="pattern-note">📊 ${c.pattern_note}</div>` : ''}
+        ${c.tip ? `<div class="ctip"><span>💡</span><span>${c.tip}</span></div>` : ''}
+        <div class="qlist">
+          ${(c.questions||[]).map((q,qi) => `
+            <div class="qitem">
+              <div class="qitem-head">
+                <span class="qtag">${papers[qi]||'PAPER '+(qi+1)}</span>
+                ${positions[qi] ? `<span class="qpos">📍 ${positions[qi]}</span>` : ''}
+                ${marks[qi] && marks[qi]>0 ? `<span class="qmarks">📝 ${marks[qi]} marks</span>` : ''}
+              </div>
+              <div class="qtext">${q}</div>
+            </div>`).join('')}
         </div>
       </div>
-    </div>`).join('');
+    </div>`}).join('');
 
+  // Paper Pattern tab
+  if (paper_pattern) {
+    document.getElementById('patternContent').innerHTML = `
+      <div class="pattern-card">
+        <div class="pattern-title">📊 PAPER STRUCTURE ANALYSIS</div>
+        <div class="pattern-grid">
+          <div class="pstat"><div class="pstat-label">Compulsory</div><div class="pstat-value">${paper_pattern.compulsory_question||'—'}</div></div>
+          <div class="pstat"><div class="pstat-label">Optional Questions</div><div class="pstat-value">${paper_pattern.optional_questions||'—'}</div></div>
+          <div class="pstat"><div class="pstat-label">Total Marks</div><div class="pstat-value">${paper_pattern.total_marks||80}</div></div>
+          <div class="pstat"><div class="pstat-label">Duration</div><div class="pstat-value">${paper_pattern.duration||'3 hours'}</div></div>
+        </div>
+        ${paper_pattern.key_insight ? `<div class="insight-box">💡 Key Insight: ${paper_pattern.key_insight}</div>` : ''}
+      </div>
+      <div style="margin-top:20px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.05em;margin-bottom:16px">TOPICS BY QUESTION POSITION</div>
+        ${buildPositionMap(clusters)}
+      </div>`;
+  }
+
+  // Predictions
   if (predictions?.length) {
     document.getElementById('predList').innerHTML = predictions.map((p,i) => `
       <div class="pcard ${p.confidence}" style="animation-delay:${i*0.04}s">
         <div class="pcard-top"><div class="pcard-num">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question}</div></div>
         <div class="pcard-meta">
           <span class="pmeta-tag conf-${p.confidence}">${p.confidence} CONFIDENCE</span>
-          <span class="pmeta-tag type-tag">${p.topic}</span>
-          <span class="pmeta-tag freq-tag">Seen ${p.frequency}×</span>
+          ${p.likely_position ? `<span class="pmeta-tag pos-tag">📍 Likely ${p.likely_position}</span>` : ''}
+          ${p.likely_marks ? `<span class="pmeta-tag marks-tag">📝 ~${p.likely_marks} marks</span>` : ''}
+          <span class="pmeta-tag topic-tag">${p.topic}</span>
+          <span class="pmeta-tag" style="background:var(--greendim);color:var(--green)">Seen ${p.frequency}×</span>
         </div>
         <div class="preason">Why likely → ${p.reason}</div>
       </div>`).join('');
   }
 
+  // Study Plan
   if (study_plan) {
     document.getElementById('planTop').innerHTML = `
-      <div class="plan-strategy"><div class="plan-strategy-title">📋 EXAM STRATEGY</div><div class="plan-strategy-text">${study_plan.strategy||''}</div></div>
+      <div class="plan-strategy"><div class="plan-strategy-title">📋 YOUR STRATEGY</div><div class="plan-strategy-text">${study_plan.strategy||''}</div></div>
       <div class="golden-box"><div class="golden-title">⭐ GOLDEN TOPICS</div><div class="golden-tags">${(study_plan.golden_topics||[]).map(t=>`<span class="gtag">${t}</span>`).join('')}</div></div>`;
     document.getElementById('daysList').innerHTML = (study_plan.days||[]).map((d,i) => `
       <div class="day-card" id="dc${i}" style="animation-delay:${i*0.05}s">
@@ -474,6 +579,26 @@ function showResults(data) {
   document.getElementById('uploadWrap').style.display = 'none';
   document.getElementById('results').classList.add('on');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── POSITION MAP ──
+function buildPositionMap(clusters) {
+  const posMap = {};
+  clusters.forEach(c => {
+    (c.question_positions||[]).forEach(pos => {
+      if (!pos) return;
+      const key = pos.replace(/[ab]/gi,'').trim();
+      if (!posMap[key]) posMap[key] = [];
+      if (!posMap[key].includes(c.topic)) posMap[key].push(c.topic);
+    });
+  });
+  if (!Object.keys(posMap).length) return '<p style="color:var(--muted);font-size:13px">Position data not available for these papers.</p>';
+  return `<div style="display:flex;flex-direction:column;gap:8px">` +
+    Object.entries(posMap).sort().map(([pos, topics]) => `
+      <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 16px">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--orange);min-width:40px">${pos}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${topics.map(t=>`<span style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 10px;background:var(--orangedim);color:var(--orange);border-radius:2px">${t}</span>`).join('')}</div>
+      </div>`).join('') + '</div>';
 }
 
 function tog(id) { document.getElementById(id).classList.toggle('open'); }
@@ -500,6 +625,7 @@ function resetApp() {
 function showLoading() {
   ['ls1','ls2','ls3','ls4','ls5'].forEach(s => document.getElementById(s).classList.remove('active','done'));
   document.getElementById('loadBar').style.width = '0%';
+  document.getElementById('loadName').textContent = `Analyzing for ${userName}...`;
   document.getElementById('loadingOverlay').classList.add('on');
   document.getElementById('analyzeBtn').disabled = true;
 }
