@@ -2,24 +2,16 @@ import os
 import json
 import re
 import io
-import base64
 import pdfplumber
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
-import google.generativeai as genai
+from groq import Groq
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = '/tmp/ashlysis_uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# ── CONFIGURE GEMINI ──
-def get_gemini():
-    api_key = os.environ.get('GEMINI_API_KEY')
-    if not api_key:
-        raise Exception('Service not configured. Contact admin.')
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel('gemini-2.0-flash')
 
 # ── PDF TEXT EXTRACTION ──
 def extract_text_from_pdf(pdf_path):
@@ -40,35 +32,11 @@ def extract_text_from_pdf(pdf_path):
         raise Exception(f"Could not read PDF: {str(e)}")
     return text.strip()
 
-# ── READ SCANNED PDF VIA GEMINI VISION ──
-def extract_text_via_gemini_vision(pdf_path, model):
-    try:
-        import fitz  # PyMuPDF
-        doc = fitz.open(pdf_path)
-        all_text = []
-        for page_num in range(min(len(doc), 4)):
-            page = doc[page_num]
-            mat = fitz.Matrix(2, 2)
-            pix = page.get_pixmap(matrix=mat)
-            img_bytes = pix.tobytes("png")
-            img_b64 = base64.standard_b64encode(img_bytes).decode()
 
-            import PIL.Image
-            import io as _io
-            img = PIL.Image.open(_io.BytesIO(img_bytes))
+# ── MAIN ANALYSIS WITH GROQ ──
+def analyze_with_groq(all_papers_text):
+    client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
 
-            response = model.generate_content([
-                img,
-                "This is an exam question paper page. Extract ALL question text exactly as written. List each question on a new line with its number. Ignore instructions like 'attempt any 3' or marks allocation. Just output the questions."
-            ])
-            all_text.append(response.text)
-        doc.close()
-        return "\n".join(all_text)
-    except Exception:
-        return ""
-
-# ── MAIN ANALYSIS WITH GEMINI ──
-def analyze_with_gemini(all_papers_text, model):
     papers_content = ""
     for paper_name, text in all_papers_text.items():
         if not text or len(text.strip()) < 50:
@@ -79,28 +47,28 @@ def analyze_with_gemini(all_papers_text, model):
     if not papers_content.strip():
         raise Exception("Could not read text from any of the papers")
 
-    prompt = f"""You are an expert exam analyzer for engineering students in India (Mumbai University / similar universities).
+    prompt = f"""You are an expert exam analyzer for engineering students in India (Mumbai University).
 
 Here are {len(all_papers_text)} previous year exam papers:
 {papers_content}
 
-Analyze these papers carefully and find:
-1. Questions/topics that REPEAT across multiple papers (same concept, even if wording differs slightly)
+Analyze these papers and find:
+1. Questions/topics that REPEAT across multiple papers (same concept, even if wording differs)
 2. Rank them by frequency
 3. Predict likely questions for the NEXT exam
 4. Create a 7-day study plan
 
-Respond ONLY with a valid JSON object in this exact format:
+Respond ONLY with a valid JSON object:
 {{
   "clusters": [
     {{
       "topic": "topic name (max 6 words)",
       "frequency": 3,
       "importance": "HIGH",
-      "questions": ["exact question from paper 1", "same topic question from paper 2"],
+      "questions": ["exact question from paper 1", "same topic from paper 2"],
       "papers": ["Paper_2023", "Paper_2024"],
-      "tip": "one practical exam tip for this topic",
-      "keywords": ["keyword1", "keyword2", "keyword3"]
+      "tip": "one practical exam tip",
+      "keywords": ["keyword1", "keyword2"]
     }}
   ],
   "predictions": [
@@ -120,25 +88,34 @@ Respond ONLY with a valid JSON object in this exact format:
         "focus": "topic name",
         "priority": "HIGH",
         "hours": 3,
-        "tasks": ["specific task 1", "specific task 2", "specific task 3"]
+        "tasks": ["task 1", "task 2", "task 3"]
       }}
     ],
-    "golden_topics": ["most important topic 1", "topic 2", "topic 3"],
-    "dont_skip": ["absolutely critical topic 1", "critical topic 2"]
+    "golden_topics": ["topic1", "topic2", "topic3"],
+    "dont_skip": ["critical topic 1", "critical topic 2"]
   }}
 }}
 
-Important rules:
+Rules:
 - clusters: 6-15 items sorted by frequency descending
 - HIGH = appeared 3+ papers or very core topic
-- MEDIUM = appeared in 2 papers  
+- MEDIUM = appeared in 2 papers
 - LOW = appeared once but important
 - predictions: 8-10 items
 - study_plan.days: exactly 7 days
-- Return ONLY the JSON object, no markdown, no explanation"""
+- Return ONLY the JSON, no markdown, no explanation"""
 
-    response = model.generate_content(prompt)
-    response_text = response.text.strip()
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are an expert exam question analyzer. Always respond with valid JSON only."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=4000
+    )
+
+    response_text = response.choices[0].message.content.strip()
     response_text = re.sub(r'^```(?:json)?\n?', '', response_text)
     response_text = re.sub(r'\n?```$', '', response_text)
     return json.loads(response_text)
@@ -161,13 +138,8 @@ def analyze():
     if len(files) > 10:
         return jsonify({'error': 'Maximum 10 papers allowed'}), 400
 
-    if not os.environ.get('GEMINI_API_KEY'):
+    if not os.environ.get('GROQ_API_KEY'):
         return jsonify({'error': 'Service not configured. Contact admin.'}), 500
-
-    try:
-        model = get_gemini()
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
     all_papers_text = {}
     paper_stats = {}
@@ -176,19 +148,16 @@ def analyze():
         if file and file.filename.lower().endswith('.pdf'):
             filename = secure_filename(file.filename)
 
-            # Clean up paper name - extract year
+            # Clean paper name - extract year/month
             paper_name = filename.rsplit('.', 1)[0]
             parts = paper_name.split('_')
             year = next((p for p in parts if re.match(r'20\d\d', p)), None)
             month = next((p for p in parts if p.lower() in ['may','nov','dec','jun','jan','feb','mar','apr']), None)
-            subject = next((p for p in reversed(parts) if len(p) > 4 and not re.match(r'20\d\d|be|computer|engineering|semester|scheme|rev|cbcgs|cbsgs', p, re.I)), None)
 
             if year and month:
                 paper_name = f"{month.title()}_{year}"
             elif year:
                 paper_name = f"Paper_{year}"
-            elif subject:
-                paper_name = subject[:15]
             else:
                 paper_name = f"Paper_{len(all_papers_text)+1}"
 
@@ -196,12 +165,7 @@ def analyze():
             file.save(filepath)
 
             try:
-                # Try text extraction first
                 text = extract_text_from_pdf(filepath)
-
-                # If too short, try vision
-                if len(text.strip()) < 100:
-                    text = extract_text_via_gemini_vision(filepath, model)
 
                 if not text or len(text.strip()) < 50:
                     return jsonify({
@@ -224,7 +188,7 @@ def analyze():
         return jsonify({'error': 'Need at least 2 readable papers to find patterns'}), 400
 
     try:
-        result = analyze_with_gemini(all_papers_text, model)
+        result = analyze_with_groq(all_papers_text)
         clusters = result.get('clusters', [])
         predictions = result.get('predictions', [])
         study_plan = result.get('study_plan', {})
@@ -294,7 +258,7 @@ def export_results():
             for t in day.get('tasks', []):
                 lines.append(f"  ✓ {t}")
 
-    lines += ["", "━"*52, "Generated by ASHLYSIS — Powered by Google Gemini", "━"*52]
+    lines += ["", "━"*52, "Generated by ASHLYSIS — Powered by Groq AI", "━"*52]
     buf = io.BytesIO("\n".join(lines).encode('utf-8'))
     buf.seek(0)
     return send_file(buf, mimetype='text/plain', as_attachment=True, download_name='ashlysis_report.txt')
