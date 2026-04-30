@@ -233,6 +233,10 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   .stat-strip{grid-template-columns:repeat(3,1fr)}.plan-top{grid-template-columns:1fr}
   .feat-grid{grid-template-columns:repeat(2,1fr)}footer{padding:20px}.name-box{padding:32px 24px}
 }
+
+/* HERO QUOTE */
+.hero-quote{font-size:15px;font-style:italic;color:var(--orange2);margin-bottom:20px;font-family:'Barlow',sans-serif;font-weight:300;opacity:0.9;border-left:2px solid var(--orange);padding-left:16px;max-width:480px;animation:fadeQuote 1s ease}
+@keyframes fadeQuote{from{opacity:0;transform:translateY(-6px)}to{opacity:0.9;transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -263,6 +267,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="hero-glow"></div>
   <div class="eyebrow">Smart PYQ Analysis</div>
   <h1>CRACK THE<br><span class="outline">PATTERN.</span></h1>
+  <p class="hero-quote" id="heroQuote"></p>
   <p class="hero-sub">Upload your previous year papers. ASHLYSIS finds which questions repeat, which question number they appear in, how many marks they carry — and predicts what's coming next.</p>
   <div class="feature-pills">
     <span class="pill pill-orange">🔍 Repeat Detection</span>
@@ -330,6 +335,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="load-orb"></div>
   <div class="load-title">ANALYZING PAPERS</div>
   <div class="load-name" id="loadName"></div>
+  <div class="load-fun" id="loadFun" style="font-size:18px;color:var(--orange2);font-family:'Barlow',sans-serif;font-weight:600;font-style:italic;margin-top:-12px;animation:fadeQuote 0.5s ease"></div>
   <div class="load-subtitle" id="loadSub">Reading your question papers...</div>
   <div class="load-steps">
     <div class="lstep" id="ls1"><span class="lstep-dot"></span>Extracting questions from PDFs</div>
@@ -391,12 +397,42 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
 </section>
 
 <footer>
-  <span class="foot-logo">ASHLYSIS</span>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <span class="foot-logo">ASHLYSIS</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em">AN ASHMIT SINGH PRODUCTION</span>
+  </div>
   <span class="foot-meta">Built for engineers who study smart &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; Powered by Groq AI</span>
 </footer>
 
 <script>
 let files = [], lastData = null, userName = '';
+
+// ── PHILOSOPHICAL QUOTES ──
+const QUOTES = [
+  '"The secret of getting ahead is getting started." — Mark Twain',
+  '"It always seems impossible until it's done." — Nelson Mandela',
+  '"Success is not final, failure is not fatal: it is the courage to continue that counts." — Churchill',
+  '"Hard work beats talent when talent doesn't work hard." — Tim Notke',
+  '"The expert in anything was once a beginner." — Helen Hayes'
+];
+
+const FUN_LINES = [
+  ' You slay, girl!',
+  ' Cheer up, mate — you got this!',
+  ' Viva kaisa gaya?',
+  ' Ye paper fodna hai!'
+];
+
+// Set random quote on load
+document.getElementById('heroQuote').textContent = '"' + QUOTES[Math.floor(Math.random() * QUOTES.length)] + '"';
+// Rotate quote every 5 seconds
+setInterval(() => {
+  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  const el = document.getElementById('heroQuote');
+  el.style.opacity = '0';
+  setTimeout(() => { el.textContent = '"' + q + '"'; el.style.opacity = '0.9'; el.style.transition = 'opacity 0.5s'; }, 300);
+}, 5000);
+
 
 // ── NAME GATE ──
 document.getElementById('nameInput').addEventListener('keypress', e => {
@@ -465,7 +501,8 @@ function showResults(data) {
   const { clusters, predictions, study_plan, paper_pattern, stats, user_name } = data;
 
   document.getElementById('resultsGreeting').textContent = `Hey ${user_name} 👋 — here's your personalized analysis`;
-  document.getElementById('resultsMeta').textContent = `${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions?.length||0} predictions`;
+  const ocrNote = data.ocr_used?.length ? ` · 🔍 OCR used on: ${data.ocr_used.join(', ')}` : '';
+  document.getElementById('resultsMeta').textContent = `${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions?.length||0} predictions${ocrNote}`;
 
   document.getElementById('statStrip').innerHTML = [
     [stats.papers,'Papers'],[stats.clusters,'Repeats'],
@@ -626,6 +663,7 @@ function showLoading() {
   ['ls1','ls2','ls3','ls4','ls5'].forEach(s => document.getElementById(s).classList.remove('active','done'));
   document.getElementById('loadBar').style.width = '0%';
   document.getElementById('loadName').textContent = `Analyzing for ${userName}...`;
+  document.getElementById('loadFun').textContent = FUN_LINES[Math.floor(Math.random() * FUN_LINES.length)];
   document.getElementById('loadingOverlay').classList.add('on');
   document.getElementById('analyzeBtn').disabled = true;
 }
