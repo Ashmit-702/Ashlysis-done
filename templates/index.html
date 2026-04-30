@@ -278,7 +278,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   </div>
 </section>
 
-<div class="upload-wrap" id="uploadWrap">
+<div class="upload-wrap" id="uploadWrap" style="display:none">
   <div class="upload-card">
     <div class="card-title">Upload PYQ Papers</div>
     <div class="card-sub">// 2–10 papers · PDF only · latest paper first</div>
@@ -417,10 +417,10 @@ const QUOTES = [
 ];
 
 const FUN_LINES = [
-  ' You slay, girl!',
-  ' Cheer up, mate — you got this!',
-  ' Viva kaisa gaya?',
-  ' Ye paper fodna hai!'
+  '🔥 You slay, girl!',
+  '😎 Cheer up, mate — you got this!',
+  '😅 Viva kaisa gaya?',
+  '💪 Ye paper fodna hai!'
 ];
 
 // Set random quote on load
@@ -445,7 +445,10 @@ function submitName() {
   userName = val;
   document.getElementById('nameGate').style.opacity = '0';
   document.getElementById('nameGate').style.transition = 'opacity 0.4s';
-  setTimeout(() => { document.getElementById('nameGate').style.display = 'none'; }, 400);
+  setTimeout(() => {
+    document.getElementById('nameGate').style.display = 'none';
+    document.getElementById('uploadWrap').style.display = 'grid';
+  }, 400);
   document.getElementById('navUser').textContent = `👋 ${userName}`;
   document.getElementById('navUser').style.display = 'block';
 }
