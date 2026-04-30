@@ -34,7 +34,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:18px 4
 .nav-user{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--orange);display:none}
 
 /* NAME GATE */
-.name-gate{position:fixed;inset:0;background:rgba(8,8,16,0.98);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px)}
+.name-gate{position:fixed;inset:0;background:rgba(8,8,16,0.98);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(20px);transition:opacity 0.4s ease}
 .name-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:48px;max-width:440px;width:90%;text-align:center;position:relative;overflow:hidden}
 .name-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--purple))}
 .name-logo{font-family:'Bebas Neue',sans-serif;font-size:42px;letter-spacing:0.1em;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:10px}
@@ -216,7 +216,7 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .day-body{display:none;padding:0 18px 16px;border-top:1px solid var(--border)}.day-card.open .day-body{display:block}
 .day-tasks{display:flex;flex-direction:column;gap:6px;margin-top:12px}
 .dtask{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:1.5;color:var(--mutedbr)}
-.dtask::before{content:'✓';color:var(--green);font-size:11px;flex-shrink:0;margin-top:1px}
+.dtask::before{content:'checkmark';color:var(--green);font-size:11px;flex-shrink:0;margin-top:1px}
 .dont-skip{background:var(--reddim);border:1px solid rgba(231,76,60,0.2);border-radius:6px;padding:16px 18px;margin-top:20px}
 .ds-title{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--red);letter-spacing:0.05em;margin-bottom:8px}
 .ds-tags{display:flex;flex-wrap:wrap;gap:6px}
@@ -249,8 +249,8 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
     <div class="name-input-wrap">
       <input class="name-input" id="nameInput" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
     </div>
-    <button class="name-btn" onclick="submitName()">LET'S CRACK IT →</button>
-    <p class="name-hint">No account needed · Free forever · Your data stays private</p>
+    <button class="name-btn" onclick="submitName()">LET'S CRACK IT &rarr;</button>
+    <p class="name-hint">No account needed &middot; Free forever &middot; Your data stays private</p>
   </div>
 </div>
 
@@ -258,7 +258,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="logo"><span class="logo-dot"></span>ASHLYSIS</div>
   <div class="nav-right">
     <span class="nav-user" id="navUser"></span>
-    <span class="nav-badge">Free · No Login</span>
+    <span class="nav-badge">Free &middot; No Login</span>
     <span class="nav-tag">Exam Intelligence</span>
   </div>
 </nav>
@@ -268,7 +268,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="eyebrow">Smart PYQ Analysis</div>
   <h1>CRACK THE<br><span class="outline">PATTERN.</span></h1>
   <p class="hero-quote" id="heroQuote"></p>
-  <p class="hero-sub">Upload your previous year papers. ASHLYSIS finds which questions repeat, which question number they appear in, how many marks they carry — and predicts what's coming next.</p>
+  <p class="hero-sub">Upload your previous year papers. ASHLYSIS finds which questions repeat, which question number they appear in, how many marks they carry — and predicts what is coming next.</p>
   <div class="feature-pills">
     <span class="pill pill-orange">🔍 Repeat Detection</span>
     <span class="pill pill-purple">📍 Question Position</span>
@@ -281,15 +281,15 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
 <div class="upload-wrap" id="uploadWrap" style="display:none">
   <div class="upload-card">
     <div class="card-title">Upload PYQ Papers</div>
-    <div class="card-sub">// 2–10 papers · PDF only · latest paper first</div>
+    <div class="card-sub">// 2-10 papers &middot; PDF only &middot; latest paper first</div>
     <div class="dropzone" id="dz" onclick="document.getElementById('fileinput').click()">
       <span class="dz-emoji">📄</span>
       <div class="dz-title">Drop PDF Papers Here</div>
-      <p class="dz-sub">or click to browse &nbsp;·&nbsp; <b>minimum 2 papers</b></p>
+      <p class="dz-sub">or click to browse &nbsp;&middot;&nbsp; <b>minimum 2 papers</b></p>
     </div>
     <input type="file" id="fileinput" multiple accept=".pdf">
     <div class="filelist" id="filelist"></div>
-    <button class="btn" id="analyzeBtn" onclick="startAnalysis()" disabled>ANALYZE PAPERS →</button>
+    <button class="btn" id="analyzeBtn" onclick="startAnalysis()" disabled>ANALYZE PAPERS &rarr;</button>
     <div class="errbox" id="errbox"></div>
   </div>
 
@@ -340,7 +340,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="load-steps">
     <div class="lstep" id="ls1"><span class="lstep-dot"></span>Extracting questions from PDFs</div>
     <div class="lstep" id="ls2"><span class="lstep-dot"></span>Finding repeat patterns + positions</div>
-    <div class="lstep" id="ls3"><span class="lstep-dot"></span>Analyzing marks & paper structure</div>
+    <div class="lstep" id="ls3"><span class="lstep-dot"></span>Analyzing marks &amp; paper structure</div>
     <div class="lstep" id="ls4"><span class="lstep-dot"></span>Predicting next exam questions</div>
     <div class="lstep" id="ls5"><span class="lstep-dot"></span>Building your personal study plan</div>
   </div>
@@ -356,8 +356,8 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
       <div class="results-meta" id="resultsMeta"></div>
     </div>
     <div class="btn-row">
-      <button class="btn-sm primary" onclick="exportReport()">↓ EXPORT REPORT</button>
-      <button class="btn-sm" onclick="resetApp()">← NEW ANALYSIS</button>
+      <button class="btn-sm primary" onclick="exportReport()">&#8595; EXPORT REPORT</button>
+      <button class="btn-sm" onclick="resetApp()">&#8592; NEW ANALYSIS</button>
     </div>
   </div>
 
@@ -380,7 +380,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
 
   <div class="tab-panel" id="panel-predictions">
     <div style="background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:6px;padding:14px 18px;margin-bottom:20px;font-size:12px;color:var(--purple);font-family:'JetBrains Mono',monospace;line-height:1.7">
-      ⚡ Predicted based on repeat patterns. Includes likely question position and marks.
+      Predicted based on repeat patterns. Includes likely question position and marks.
     </div>
     <div class="pred-grid" id="predList"></div>
   </div>
@@ -392,7 +392,7 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
   </div>
 
   <div class="reset-wrap">
-    <button class="reset-btn" onclick="resetApp()">← Start New Analysis</button>
+    <button class="reset-btn" onclick="resetApp()">&#8592; Start New Analysis</button>
   </div>
 </section>
 
@@ -401,218 +401,284 @@ footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;justify
     <span class="foot-logo">ASHLYSIS</span>
     <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em">AN ASHMIT SINGH PRODUCTION</span>
   </div>
-  <span class="foot-meta">Built for engineers who study smart &nbsp;·&nbsp; Free forever &nbsp;·&nbsp; Powered by Groq AI</span>
+  <span class="foot-meta">Built for engineers who study smart &nbsp;&middot;&nbsp; Free forever &nbsp;&middot;&nbsp; Powered by Groq AI</span>
 </footer>
 
 <script>
-let files = [], lastData = null, userName = '';
+// ── FIX 1: All quotes use straight apostrophes — no curly Unicode chars ──
+var files = [], lastData = null, userName = '';
 
-// ── PHILOSOPHICAL QUOTES ──
-const QUOTES = [
-  '"The secret of getting ahead is getting started." — Mark Twain',
-  '"It always seems impossible until it's done." — Nelson Mandela',
-  '"Success is not final, failure is not fatal: it is the courage to continue that counts." — Churchill',
-  '"Hard work beats talent when talent doesn't work hard." — Tim Notke',
-  '"The expert in anything was once a beginner." — Helen Hayes'
+var QUOTES = [
+  'The secret of getting ahead is getting started. — Mark Twain',
+  'It always seems impossible until it is done. — Nelson Mandela',
+  'Success is not final, failure is not fatal: it is the courage to continue that counts. — Churchill',
+  'Hard work beats talent when talent does not work hard. — Tim Notke',
+  'The expert in anything was once a beginner. — Helen Hayes',
+  'Art is never finished, it is only abandoned. — Leonardo da Vinci'
 ];
 
-const FUN_LINES = [
-  '🔥 You slay, girl!',
-  '😎 Cheer up, mate — you got this!',
-  '😅 Viva kaisa gaya?',
-  '💪 Ye paper fodna hai!'
+var FUN_LINES = [
+  'You slay, let\'s go!',
+  'Cheer up mate — you got this!',
+  'Viva kaisa gaya? Fodna hai!',
+  'Ye paper fodna hai!'
 ];
 
-// Set random quote on load
-document.getElementById('heroQuote').textContent = '"' + QUOTES[Math.floor(Math.random() * QUOTES.length)] + '"';
-// Rotate quote every 5 seconds
-setInterval(() => {
-  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-  const el = document.getElementById('heroQuote');
+document.getElementById('heroQuote').textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+setInterval(function() {
+  var q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  var el = document.getElementById('heroQuote');
+  el.style.transition = 'opacity 0.8s';
   el.style.opacity = '0';
-  setTimeout(() => { el.textContent = '"' + q + '"'; el.style.opacity = '0.9'; el.style.transition = 'opacity 0.5s'; }, 300);
-}, 5000);
-
+  setTimeout(function() { el.textContent = q; el.style.opacity = '0.9'; }, 800);
+}, 60000);
 
 // ── NAME GATE ──
-document.getElementById('nameInput').addEventListener('keypress', e => {
+document.getElementById('nameInput').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') submitName();
 });
 
 function submitName() {
-  const val = document.getElementById('nameInput').value.trim();
-  if (!val) { document.getElementById('nameInput').style.borderColor = 'var(--red)'; return; }
+  var val = document.getElementById('nameInput').value.trim();
+  // Sanitize: letters, numbers, spaces only
+  val = val.replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 30);
+  if (!val) {
+    document.getElementById('nameInput').style.borderColor = 'var(--red)';
+    return;
+  }
   userName = val;
-  document.getElementById('nameGate').style.opacity = '0';
-  document.getElementById('nameGate').style.transition = 'opacity 0.4s';
-  setTimeout(() => {
-    document.getElementById('nameGate').style.display = 'none';
+
+  // FIX 2: Set pointer-events:none IMMEDIATELY so gate stops blocking clicks
+  // FIX 3: Set transition BEFORE opacity
+  var gate = document.getElementById('nameGate');
+  gate.style.transition = 'opacity 0.4s ease';
+  gate.style.pointerEvents = 'none';  // KEY: stops blocking clicks right away
+  gate.style.opacity = '0';
+
+  // FIX 2: Use 500ms — slightly longer than the 0.4s transition
+  setTimeout(function() {
+    gate.style.display = 'none';
     document.getElementById('uploadWrap').style.display = 'grid';
-  }, 400);
-  document.getElementById('navUser').textContent = `👋 ${userName}`;
+  }, 500);
+
+  document.getElementById('navUser').textContent = 'Hey ' + userName;
   document.getElementById('navUser').style.display = 'block';
 }
 
 // ── DRAG & DROP ──
-const dz = document.getElementById('dz');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addFiles(Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.pdf'))); });
-document.getElementById('fileinput').addEventListener('change', e => { addFiles(Array.from(e.target.files)); e.target.value = ''; });
+var dz = document.getElementById('dz');
+dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', function() { dz.classList.remove('over'); });
+dz.addEventListener('drop', function(e) {
+  e.preventDefault(); dz.classList.remove('over');
+  addFiles(Array.from(e.dataTransfer.files).filter(function(f) { return f.name.toLowerCase().endsWith('.pdf'); }));
+});
+document.getElementById('fileinput').addEventListener('change', function(e) {
+  addFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
 
-function addFiles(nf) { nf.forEach(f => { if (!files.find(x => x.name === f.name)) files.push(f); }); renderFiles(); updateBtn(); }
+function addFiles(nf) {
+  nf.forEach(function(f) {
+    if (!f.name.toLowerCase().endsWith('.pdf')) return; // skip non-PDFs with warning
+    if (!files.find(function(x) { return x.name === f.name; })) files.push(f);
+  });
+  renderFiles();
+  updateBtn();
+}
 function removeFile(i) { files.splice(i, 1); renderFiles(); updateBtn(); }
 function renderFiles() {
-  document.getElementById('filelist').innerHTML = files.map((f,i) => `
-    <div class="fileitem"><span class="ficon">◈</span><span class="fname">${f.name}</span>
-    <span class="fsize">${(f.size/1024).toFixed(0)}KB</span>
-    <button class="fremove" onclick="removeFile(${i})">✕</button></div>`).join('');
+  document.getElementById('filelist').innerHTML = files.map(function(f, i) {
+    return '<div class="fileitem"><span class="ficon">&#9670;</span><span class="fname">' + escHtml(f.name) + '</span>' +
+      '<span class="fsize">' + (f.size/1024).toFixed(0) + 'KB</span>' +
+      '<button class="fremove" onclick="removeFile(' + i + ')">&#10005;</button></div>';
+  }).join('');
 }
 function updateBtn() { document.getElementById('analyzeBtn').disabled = files.length < 2; }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ── ANALYZE ──
 async function startAnalysis() {
-  hideErr(); showLoading();
-  const steps = ['ls1','ls2','ls3','ls4','ls5'];
-  const subs = ['Reading your question papers...','Finding repeat patterns & positions...','Analyzing marks & paper structure...','Predicting exam questions...','Building your study plan...'];
-  const progs = [10, 30, 55, 75, 90];
-  let si = 0;
-  const iv = setInterval(() => {
-    if (si > 0) { document.getElementById(steps[si-1]).classList.remove('active'); document.getElementById(steps[si-1]).classList.add('done'); }
-    if (si < steps.length) { document.getElementById(steps[si]).classList.add('active'); document.getElementById('loadSub').textContent = subs[si]; document.getElementById('loadBar').style.width = progs[si] + '%'; si++; }
+  hideErr();
+  showLoading();
+  var steps = ['ls1','ls2','ls3','ls4','ls5'];
+  var subs = [
+    'Reading your question papers...',
+    'Finding repeat patterns & positions...',
+    'Analyzing marks & paper structure...',
+    'Predicting exam questions...',
+    'Building your study plan...'
+  ];
+  var progs = [10, 30, 55, 75, 90];
+  var si = 0;
+  var iv = setInterval(function() {
+    if (si > 0) {
+      document.getElementById(steps[si-1]).classList.remove('active');
+      document.getElementById(steps[si-1]).classList.add('done');
+    }
+    if (si < steps.length) {
+      document.getElementById(steps[si]).classList.add('active');
+      document.getElementById('loadSub').textContent = subs[si];
+      document.getElementById('loadBar').style.width = progs[si] + '%';
+      si++;
+    }
   }, 2500);
 
-  const fd = new FormData();
-  files.forEach(f => fd.append('files', f));
+  var fd = new FormData();
+  files.forEach(function(f) { fd.append('files', f); });
   fd.append('user_name', userName);
 
   try {
-    const res = await fetch('/analyze', { method: 'POST', body: fd });
+    var res = await fetch('/analyze', { method: 'POST', body: fd });
     clearInterval(iv);
     document.getElementById('loadBar').style.width = '100%';
-    const data = await res.json();
-    if (!res.ok) { showErr(data.error || 'Something went wrong.'); hideLoading(); return; }
+    var data = await res.json();
+    if (!res.ok) {
+      showErr(data.error || 'Something went wrong.');
+      hideLoading();
+      return;
+    }
     lastData = data;
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(function(r) { setTimeout(r, 400); });
     hideLoading();
     showResults(data);
-  } catch(e) { clearInterval(iv); showErr('Network error. Please try again.'); hideLoading(); }
+  } catch(e) {
+    clearInterval(iv);
+    showErr('Network error. Please check your connection and try again.');
+    hideLoading();
+  }
 }
 
 // ── SHOW RESULTS ──
 function showResults(data) {
-  const { clusters, predictions, study_plan, paper_pattern, stats, user_name } = data;
+  var clusters = data.clusters || [];
+  var predictions = data.predictions || [];
+  var study_plan = data.study_plan || {};
+  var paper_pattern = data.paper_pattern || {};
+  var stats = data.stats || {};
+  var user_name = data.user_name || userName;
 
-  document.getElementById('resultsGreeting').textContent = `Hey ${user_name} 👋 — here's your personalized analysis`;
-  const ocrNote = data.ocr_used?.length ? ` · 🔍 OCR used on: ${data.ocr_used.join(', ')}` : '';
-  document.getElementById('resultsMeta').textContent = `${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions?.length||0} predictions${ocrNote}`;
+  document.getElementById('resultsGreeting').textContent = 'Hey ' + user_name + ' — here is your personalized analysis';
+  document.getElementById('resultsMeta').textContent = stats.papers + ' papers · ' + stats.clusters + ' repeat patterns · ' + predictions.length + ' predictions';
 
   document.getElementById('statStrip').innerHTML = [
-    [stats.papers,'Papers'],[stats.clusters,'Repeats'],
-    [stats.high_priority,'HIGH Priority'],[predictions?.length||0,'Predictions'],
-    [clusters.filter(c=>c.consistent_position).length,'Same Position Always']
-  ].map(([n,l]) => `<div class="scard"><div class="scard-num">${n}</div><div class="scard-lbl">${l}</div></div>`).join('');
+    [stats.papers, 'Papers'],
+    [stats.clusters, 'Repeats'],
+    [stats.high_priority, 'HIGH Priority'],
+    [predictions.length, 'Predictions'],
+    [clusters.filter(function(c) { return c.consistent_position; }).length, 'Same Position Always']
+  ].map(function(item) {
+    return '<div class="scard"><div class="scard-num">' + item[0] + '</div><div class="scard-lbl">' + item[1] + '</div></div>';
+  }).join('');
 
   document.getElementById('tb1').textContent = clusters.length;
-  document.getElementById('tb2').textContent = predictions?.length||0;
+  document.getElementById('tb2').textContent = predictions.length;
 
-  // Clusters with position + marks
-  document.getElementById('clusterList').innerHTML = clusters.map((c,i) => {
-    const positions = c.question_positions || [];
-    const marks = c.marks_each_time || [];
-    const papers = c.papers || [];
-    const consistentPos = c.consistent_position;
-    const consistentMarks = c.consistent_marks;
+  // Clusters
+  document.getElementById('clusterList').innerHTML = clusters.map(function(c, i) {
+    var positions = c.question_positions || [];
+    var marks = c.marks_each_time || [];
+    var papers = c.papers || [];
+    var consistentPos = c.consistent_position;
+    var consistentMarks = c.consistent_marks;
+    var uniquePos = positions.filter(function(v,idx,a){return a.indexOf(v)===idx;}).join(', ');
+    var uniqueMarks = marks.filter(function(m){return m>0;}).filter(function(v,idx,a){return a.indexOf(v)===idx;}).join('/');
 
-    return `
-    <div class="ccard ${c.importance}" id="cc${i}" style="animation-delay:${i*0.04}s">
-      <div class="chead" onclick="tog('cc${i}')">
-        <div class="cfreq-wrap">
-          <div class="cfreq">${c.frequency}</div>
-          <div class="cfreq-label">times</div>
-        </div>
-        <div class="cinfo">
-          <div class="ctopic">${c.topic}</div>
-          <div class="cmeta">
-            ${positions.length ? `<span class="cmeta-tag pos">📍 ${[...new Set(positions)].join(', ')}${consistentPos?' ✓':''}</span>` : ''}
-            ${marks.filter(m=>m>0).length ? `<span class="cmeta-tag marks">📝 ${[...new Set(marks.filter(m=>m>0))].join('/')} marks${consistentMarks?' ✓':''}</span>` : ''}
-            ${consistentPos ? `<span class="cmeta-tag consistent">Always same position</span>` : ''}
-          </div>
-          <div class="cpapers">📄 ${papers.join(' · ')}</div>
-        </div>
-        <span class="cbadge ${c.importance}">${c.importance}</span>
-        <span class="cchev">▶</span>
-      </div>
-      <div class="cbody">
-        ${c.pattern_note ? `<div class="pattern-note">📊 ${c.pattern_note}</div>` : ''}
-        ${c.tip ? `<div class="ctip"><span>💡</span><span>${c.tip}</span></div>` : ''}
-        <div class="qlist">
-          ${(c.questions||[]).map((q,qi) => `
-            <div class="qitem">
-              <div class="qitem-head">
-                <span class="qtag">${papers[qi]||'PAPER '+(qi+1)}</span>
-                ${positions[qi] ? `<span class="qpos">📍 ${positions[qi]}</span>` : ''}
-                ${marks[qi] && marks[qi]>0 ? `<span class="qmarks">📝 ${marks[qi]} marks</span>` : ''}
-              </div>
-              <div class="qtext">${q}</div>
-            </div>`).join('')}
-        </div>
-      </div>
-    </div>`}).join('');
+    return '<div class="ccard ' + c.importance + '" id="cc' + i + '" style="animation-delay:' + (i*0.04) + 's">' +
+      '<div class="chead" onclick="tog(\'cc' + i + '\')">' +
+        '<div class="cfreq-wrap"><div class="cfreq">' + c.frequency + '</div><div class="cfreq-label">times</div></div>' +
+        '<div class="cinfo">' +
+          '<div class="ctopic">' + escHtml(c.topic) + '</div>' +
+          '<div class="cmeta">' +
+            (positions.length ? '<span class="cmeta-tag pos">&#128205; ' + escHtml(uniquePos) + (consistentPos ? ' \u2713' : '') + '</span>' : '') +
+            (uniqueMarks ? '<span class="cmeta-tag marks">&#128221; ' + uniqueMarks + ' marks' + (consistentMarks ? ' \u2713' : '') + '</span>' : '') +
+            (consistentPos ? '<span class="cmeta-tag consistent">Always same position</span>' : '') +
+          '</div>' +
+          '<div class="cpapers">&#128196; ' + escHtml(papers.join(' · ')) + '</div>' +
+        '</div>' +
+        '<span class="cbadge ' + c.importance + '">' + c.importance + '</span>' +
+        '<span class="cchev">&#9654;</span>' +
+      '</div>' +
+      '<div class="cbody">' +
+        (c.pattern_note ? '<div class="pattern-note">&#128202; ' + escHtml(c.pattern_note) + '</div>' : '') +
+        (c.tip ? '<div class="ctip"><span>&#128161;</span><span>' + escHtml(c.tip) + '</span></div>' : '') +
+        '<div class="qlist">' +
+          (c.questions || []).map(function(q, qi) {
+            return '<div class="qitem">' +
+              '<div class="qitem-head">' +
+                '<span class="qtag">' + escHtml(papers[qi] || ('PAPER ' + (qi+1))) + '</span>' +
+                (positions[qi] ? '<span class="qpos">&#128205; ' + escHtml(positions[qi]) + '</span>' : '') +
+                (marks[qi] && marks[qi] > 0 ? '<span class="qmarks">&#128221; ' + marks[qi] + ' marks</span>' : '') +
+              '</div>' +
+              '<div class="qtext">' + escHtml(q) + '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
 
-  // Paper Pattern tab
+  // Paper Pattern
   if (paper_pattern) {
-    document.getElementById('patternContent').innerHTML = `
-      <div class="pattern-card">
-        <div class="pattern-title">📊 PAPER STRUCTURE ANALYSIS</div>
-        <div class="pattern-grid">
-          <div class="pstat"><div class="pstat-label">Compulsory</div><div class="pstat-value">${paper_pattern.compulsory_question||'—'}</div></div>
-          <div class="pstat"><div class="pstat-label">Optional Questions</div><div class="pstat-value">${paper_pattern.optional_questions||'—'}</div></div>
-          <div class="pstat"><div class="pstat-label">Total Marks</div><div class="pstat-value">${paper_pattern.total_marks||80}</div></div>
-          <div class="pstat"><div class="pstat-label">Duration</div><div class="pstat-value">${paper_pattern.duration||'3 hours'}</div></div>
-        </div>
-        ${paper_pattern.key_insight ? `<div class="insight-box">💡 Key Insight: ${paper_pattern.key_insight}</div>` : ''}
-      </div>
-      <div style="margin-top:20px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.05em;margin-bottom:16px">TOPICS BY QUESTION POSITION</div>
-        ${buildPositionMap(clusters)}
-      </div>`;
+    document.getElementById('patternContent').innerHTML =
+      '<div class="pattern-card">' +
+        '<div class="pattern-title">&#128202; PAPER STRUCTURE ANALYSIS</div>' +
+        '<div class="pattern-grid">' +
+          '<div class="pstat"><div class="pstat-label">Compulsory</div><div class="pstat-value">' + escHtml(paper_pattern.compulsory_question || '—') + '</div></div>' +
+          '<div class="pstat"><div class="pstat-label">Optional Questions</div><div class="pstat-value">' + escHtml(paper_pattern.optional_questions || '—') + '</div></div>' +
+          '<div class="pstat"><div class="pstat-label">Total Marks</div><div class="pstat-value">' + (paper_pattern.total_marks || 80) + '</div></div>' +
+          '<div class="pstat"><div class="pstat-label">Duration</div><div class="pstat-value">' + escHtml(paper_pattern.duration || '3 hours') + '</div></div>' +
+        '</div>' +
+        (paper_pattern.key_insight ? '<div class="insight-box">&#128161; Key Insight: ' + escHtml(paper_pattern.key_insight) + '</div>' : '') +
+      '</div>' +
+      '<div style="margin-top:20px">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:0.05em;margin-bottom:16px">TOPICS BY QUESTION POSITION</div>' +
+        buildPositionMap(clusters) +
+      '</div>';
   }
 
   // Predictions
-  if (predictions?.length) {
-    document.getElementById('predList').innerHTML = predictions.map((p,i) => `
-      <div class="pcard ${p.confidence}" style="animation-delay:${i*0.04}s">
-        <div class="pcard-top"><div class="pcard-num">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question}</div></div>
-        <div class="pcard-meta">
-          <span class="pmeta-tag conf-${p.confidence}">${p.confidence} CONFIDENCE</span>
-          ${p.likely_position ? `<span class="pmeta-tag pos-tag">📍 Likely ${p.likely_position}</span>` : ''}
-          ${p.likely_marks ? `<span class="pmeta-tag marks-tag">📝 ~${p.likely_marks} marks</span>` : ''}
-          <span class="pmeta-tag topic-tag">${p.topic}</span>
-          <span class="pmeta-tag" style="background:var(--greendim);color:var(--green)">Seen ${p.frequency}×</span>
-        </div>
-        <div class="preason">Why likely → ${p.reason}</div>
-      </div>`).join('');
+  if (predictions.length) {
+    document.getElementById('predList').innerHTML = predictions.map(function(p, i) {
+      return '<div class="pcard ' + p.confidence + '" style="animation-delay:' + (i*0.04) + 's">' +
+        '<div class="pcard-top"><div class="pcard-num">' + String(i+1).padStart(2,'0') + '</div><div class="pcard-q">' + escHtml(p.question) + '</div></div>' +
+        '<div class="pcard-meta">' +
+          '<span class="pmeta-tag conf-' + p.confidence + '">' + p.confidence + ' CONFIDENCE</span>' +
+          (p.likely_position ? '<span class="pmeta-tag pos-tag">&#128205; Likely ' + escHtml(p.likely_position) + '</span>' : '') +
+          (p.likely_marks ? '<span class="pmeta-tag marks-tag">&#128221; ~' + p.likely_marks + ' marks</span>' : '') +
+          '<span class="pmeta-tag topic-tag">' + escHtml(p.topic) + '</span>' +
+          '<span class="pmeta-tag" style="background:var(--greendim);color:var(--green)">Seen ' + p.frequency + 'x</span>' +
+        '</div>' +
+        '<div class="preason">Why likely: ' + escHtml(p.reason || '') + '</div>' +
+      '</div>';
+    }).join('');
   }
 
   // Study Plan
   if (study_plan) {
-    document.getElementById('planTop').innerHTML = `
-      <div class="plan-strategy"><div class="plan-strategy-title">📋 YOUR STRATEGY</div><div class="plan-strategy-text">${study_plan.strategy||''}</div></div>
-      <div class="golden-box"><div class="golden-title">⭐ GOLDEN TOPICS</div><div class="golden-tags">${(study_plan.golden_topics||[]).map(t=>`<span class="gtag">${t}</span>`).join('')}</div></div>`;
-    document.getElementById('daysList').innerHTML = (study_plan.days||[]).map((d,i) => `
-      <div class="day-card" id="dc${i}" style="animation-delay:${i*0.05}s">
-        <div class="day-head" onclick="tog('dc${i}')">
-          <div class="day-num">DAY ${d.day}</div>
-          <div class="day-info"><div class="day-focus">${d.focus}</div><div class="day-hrs">${d.hours} hours recommended</div></div>
-          <span class="day-badge ${d.priority}">${d.priority}</span><span class="day-chev">▶</span>
-        </div>
-        <div class="day-body"><div class="day-tasks">${(d.tasks||[]).map(t=>`<div class="dtask">${t}</div>`).join('')}</div></div>
-      </div>`).join('');
-    if (study_plan.dont_skip?.length) {
-      document.getElementById('dontSkip').innerHTML = `
-        <div class="dont-skip"><div class="ds-title">⚠ NEVER SKIP THESE</div>
-        <div class="ds-tags">${study_plan.dont_skip.map(t=>`<span class="ds-tag">${t}</span>`).join('')}</div></div>`;
+    document.getElementById('planTop').innerHTML =
+      '<div class="plan-strategy"><div class="plan-strategy-title">&#128203; YOUR STRATEGY</div><div class="plan-strategy-text">' + escHtml(study_plan.strategy || '') + '</div></div>' +
+      '<div class="golden-box"><div class="golden-title">&#11088; GOLDEN TOPICS</div><div class="golden-tags">' +
+        (study_plan.golden_topics || []).map(function(t) { return '<span class="gtag">' + escHtml(t) + '</span>'; }).join('') +
+      '</div></div>';
+
+    document.getElementById('daysList').innerHTML = (study_plan.days || []).map(function(d, i) {
+      return '<div class="day-card" id="dc' + i + '" style="animation-delay:' + (i*0.05) + 's">' +
+        '<div class="day-head" onclick="tog(\'dc' + i + '\')">' +
+          '<div class="day-num">DAY ' + d.day + '</div>' +
+          '<div class="day-info"><div class="day-focus">' + escHtml(d.focus) + '</div><div class="day-hrs">' + d.hours + ' hours recommended</div></div>' +
+          '<span class="day-badge ' + d.priority + '">' + d.priority + '</span><span class="day-chev">&#9654;</span>' +
+        '</div>' +
+        '<div class="day-body"><div class="day-tasks">' +
+          (d.tasks || []).map(function(t) { return '<div class="dtask">' + escHtml(t) + '</div>'; }).join('') +
+        '</div></div>' +
+      '</div>';
+    }).join('');
+
+    if (study_plan.dont_skip && study_plan.dont_skip.length) {
+      document.getElementById('dontSkip').innerHTML =
+        '<div class="dont-skip"><div class="ds-title">&#9888; NEVER SKIP THESE</div>' +
+        '<div class="ds-tags">' + study_plan.dont_skip.map(function(t) { return '<span class="ds-tag">' + escHtml(t) + '</span>'; }).join('') + '</div></div>';
     }
   }
 
@@ -623,56 +689,93 @@ function showResults(data) {
 
 // ── POSITION MAP ──
 function buildPositionMap(clusters) {
-  const posMap = {};
-  clusters.forEach(c => {
-    (c.question_positions||[]).forEach(pos => {
+  var posMap = {};
+  clusters.forEach(function(c) {
+    (c.question_positions || []).forEach(function(pos) {
       if (!pos) return;
-      const key = pos.replace(/[ab]/gi,'').trim();
+      var key = pos.replace(/[ab]/gi, '').trim();
       if (!posMap[key]) posMap[key] = [];
-      if (!posMap[key].includes(c.topic)) posMap[key].push(c.topic);
+      if (posMap[key].indexOf(c.topic) === -1) posMap[key].push(c.topic);
     });
   });
-  if (!Object.keys(posMap).length) return '<p style="color:var(--muted);font-size:13px">Position data not available for these papers.</p>';
-  return `<div style="display:flex;flex-direction:column;gap:8px">` +
-    Object.entries(posMap).sort().map(([pos, topics]) => `
-      <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 16px">
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--orange);min-width:40px">${pos}</span>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">${topics.map(t=>`<span style="font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 10px;background:var(--orangedim);color:var(--orange);border-radius:2px">${t}</span>`).join('')}</div>
-      </div>`).join('') + '</div>';
+  var keys = Object.keys(posMap);
+  if (!keys.length) return '<p style="color:var(--muted);font-size:13px">Position data not available for these papers.</p>';
+  return '<div style="display:flex;flex-direction:column;gap:8px">' +
+    keys.sort().map(function(pos) {
+      return '<div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:12px 16px">' +
+        '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--orange);min-width:40px">' + escHtml(pos) + '</span>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+          posMap[pos].map(function(t) {
+            return '<span style="font-family:\'JetBrains Mono\',monospace;font-size:10px;padding:3px 10px;background:var(--orangedim);color:var(--orange);border-radius:2px">' + escHtml(t) + '</span>';
+          }).join('') +
+        '</div></div>';
+    }).join('') + '</div>';
 }
 
 function tog(id) { document.getElementById(id).classList.toggle('open'); }
+
 function switchTab(name, btn) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   btn.classList.add('active');
   document.getElementById('panel-' + name).classList.add('active');
 }
+
 async function exportReport() {
   if (!lastData) return;
-  const res = await fetch('/export', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(lastData) });
-  const blob = await res.blob();
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ashlysis_report.txt'; a.click();
+  try {
+    var res = await fetch('/export', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(lastData)
+    });
+    var blob = await res.blob();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    // FIX: include user name in filename
+    a.download = 'ashlysis_' + (userName || 'report').replace(/[^a-z0-9]/gi, '_') + '.txt';
+    a.click();
+  } catch(e) {
+    alert('Export failed. Please try again.');
+  }
 }
+
 function resetApp() {
   files = []; lastData = null; renderFiles(); updateBtn();
   document.getElementById('uploadWrap').style.display = 'grid';
   document.getElementById('results').classList.remove('on');
-  ['ls1','ls2','ls3','ls4','ls5'].forEach(s => document.getElementById(s).classList.remove('active','done'));
+  ['ls1','ls2','ls3','ls4','ls5'].forEach(function(s) {
+    document.getElementById(s).classList.remove('active', 'done');
+  });
   document.getElementById('loadBar').style.width = '0%';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
 function showLoading() {
-  ['ls1','ls2','ls3','ls4','ls5'].forEach(s => document.getElementById(s).classList.remove('active','done'));
+  ['ls1','ls2','ls3','ls4','ls5'].forEach(function(s) {
+    document.getElementById(s).classList.remove('active', 'done');
+  });
   document.getElementById('loadBar').style.width = '0%';
-  document.getElementById('loadName').textContent = `Analyzing for ${userName}...`;
+  document.getElementById('loadName').textContent = 'Analyzing for ' + userName + '...';
   document.getElementById('loadFun').textContent = FUN_LINES[Math.floor(Math.random() * FUN_LINES.length)];
   document.getElementById('loadingOverlay').classList.add('on');
   document.getElementById('analyzeBtn').disabled = true;
 }
-function hideLoading() { document.getElementById('loadingOverlay').classList.remove('on'); updateBtn(); }
-function showErr(msg) { const b = document.getElementById('errbox'); b.textContent = '⚠ ' + msg; b.classList.add('on'); }
-function hideErr() { document.getElementById('errbox').classList.remove('on'); }
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('on');
+  updateBtn();
+}
+
+function showErr(msg) {
+  var b = document.getElementById('errbox');
+  b.textContent = 'Error: ' + msg;
+  b.classList.add('on');
+}
+
+function hideErr() {
+  document.getElementById('errbox').classList.remove('on');
+}
 </script>
 </body>
 </html>
