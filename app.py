@@ -14,7 +14,7 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = '/tmp/ashlysis_uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# ── DAILY QUOTA COUNTER ──
+# ── DAILY QUOTA ──
 _quota = {'date': str(date.today()), 'count': 0}
 DAILY_LIMIT = 100
 
@@ -24,10 +24,10 @@ def check_quota():
         _quota['date'] = today
         _quota['count'] = 0
     if _quota['count'] >= DAILY_LIMIT:
-        raise Exception(f'Daily analysis limit reached. Please try again tomorrow.')
+        raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-# ── PDF TEXT EXTRACTION (pdfplumber) ──
+# ── PDF EXTRACTION ──
 def extract_text_from_pdf(pdf_path):
     text = ""
     try:
@@ -46,83 +46,80 @@ def extract_text_from_pdf(pdf_path):
         raise Exception(f"Could not read PDF: {str(e)}")
     return text.strip()
 
-# ── TESSERACT OCR FOR SCANNED PDFs ──
+# ── TESSERACT OCR ──
 def extract_text_via_ocr(pdf_path):
     try:
-        import fitz  # PyMuPDF
+        import fitz
         import pytesseract
-        from PIL import Image
-        import tempfile
+        from PIL import Image as PILImage
+        import io as _io
 
         doc = fitz.open(pdf_path)
         all_text = []
-
         for page_num in range(len(doc)):
             page = doc[page_num]
-            # Render at 300 DPI for good OCR accuracy
             mat = fitz.Matrix(300/72, 300/72)
             pix = page.get_pixmap(matrix=mat, colorspace=fitz.csGRAY)
-            img_bytes = pix.tobytes("png")
-
-            # PIL image
-            from PIL import Image as PILImage
-            import io as _io
-            img = PILImage.open(_io.BytesIO(img_bytes))
-
-            # Tesseract OCR
-            custom_config = r'--oem 3 --psm 6'
-            text = pytesseract.image_to_string(img, config=custom_config)
+            img = PILImage.open(_io.BytesIO(pix.tobytes("png")))
+            text = pytesseract.image_to_string(img, config=r'--oem 3 --psm 6')
             if text.strip():
                 all_text.append(text)
-
         doc.close()
         return "\n".join(all_text).strip()
-    except ImportError as e:
-        raise Exception(f"OCR not available: {str(e)}")
     except Exception as e:
         raise Exception(f"OCR failed: {str(e)}")
 
-# ── SMART QUESTION LINE EXTRACTION ──
+# ── SMART QUESTION EXTRACTION ──
+# Extract ONLY question lines — keeps all Q1-Q6 regardless of position in file
 def extract_questions_only(text):
     lines = text.split('\n')
     question_lines = []
-    capture_next = False
-    for line in lines:
-        line = line.strip()
-        if not line or len(line) < 10:
-            capture_next = False
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if not line:
+            i += 1
             continue
-        is_question = bool(re.search(
-            r'Q\.?\s*\d|question\s*\d|\b\d{1,2}\s*[.)]\s*[A-Z(]|'
+
+        is_q = bool(re.search(
+            r'^\s*Q\.?\s*\d+|^\s*\d{1,2}\s*[.)]\s*[A-Z(a-z]|'
             r'explain|describe|define|discuss|construct|design|compare|'
             r'differentiate|draw|write|state|list|what|how|why|derive|'
             r'calculate|implement|short\s*note|advantages|disadvantages|'
             r'elaborate|illustrate|justify|evaluate|analyze|generate|'
-            r'compute|solve|find|prove|show|demonstrate',
+            r'compute|solve|find|prove|show|demonstrate|flowchart|'
+            r'difference between|types of|working of|phases of|'
+            r'with example|with suitable|with neat|with diagram',
             line, re.I
         ))
-        if is_question:
-            question_lines.append(line[:300])
-            capture_next = True
-        elif capture_next and len(line) > 20:
-            if question_lines:
-                question_lines[-1] = question_lines[-1] + ' ' + line[:100]
-            capture_next = False
-    return '\n'.join(question_lines[:80])
 
-# ── PARSE PAPER NAME + YEAR ──
+        if is_q and len(line) > 12:
+            # Grab this line + next continuation line if it exists
+            combined = line
+            if i + 1 < len(lines):
+                next_line = lines[i+1].strip()
+                if next_line and len(next_line) > 10 and not re.match(r'^\s*Q\.?\s*\d+|\d{1,2}\s*[.)]', next_line):
+                    combined += ' ' + next_line
+                    i += 1  # skip next line since we consumed it
+            question_lines.append(combined[:350])
+
+        i += 1
+
+    return '\n'.join(question_lines)
+
+# ── PAPER NAME PARSER ──
 MONTH_MAP = {
-    'jan': ('January', 1), 'feb': ('February', 2), 'mar': ('March', 3),
-    'apr': ('April', 4), 'may': ('May', 5), 'jun': ('June', 6),
-    'jul': ('July', 7), 'aug': ('August', 8), 'sep': ('September', 9),
-    'oct': ('October', 10), 'nov': ('November', 11), 'dec': ('December', 12)
+    'jan':('January',1),'feb':('February',2),'mar':('March',3),
+    'apr':('April',4),'may':('May',5),'jun':('June',6),
+    'jul':('July',7),'aug':('August',8),'sep':('September',9),
+    'oct':('October',10),'nov':('November',11),'dec':('December',12)
 }
 
 def parse_paper_name(filename):
-    parts = filename.lower().replace('-', '_').split('_')
+    parts = filename.lower().replace('-','_').split('_')
     year = next((int(p) for p in parts if re.match(r'20\d\d$', p)), None)
     month_key = next((p[:3] for p in parts if p[:3] in MONTH_MAP), None)
-    month_name, month_num = MONTH_MAP.get(month_key, ('', 0))
+    month_name, month_num = MONTH_MAP.get(month_key, ('',0))
     sort_key = year * 100 + month_num if year else 0
     if year and month_name:
         display = f"{month_name}_{year}"
@@ -132,17 +129,17 @@ def parse_paper_name(filename):
         display = f"Paper_{filename[:10]}"
     return display, sort_key
 
-# ── GROQ CALL WITH RETRY ──
+# ── GROQ WITH RETRY ──
 def call_groq_with_retry(client, prompt, retries=2):
     for attempt in range(retries + 1):
         try:
             response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "You are an expert exam question analyzer. Always respond with valid JSON only. Never add markdown backticks or explanation."},
+                    {"role": "system", "content": "You are an expert exam question analyzer for Mumbai University engineering papers. Always respond with valid JSON only. No markdown, no explanation."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
+                temperature=0.2,
                 max_tokens=4000
             )
             return response.choices[0].message.content.strip()
@@ -152,12 +149,12 @@ def call_groq_with_retry(client, prompt, retries=2):
                 if attempt < retries:
                     time.sleep(30)
                     continue
-                raise Exception('Rate limit reached. Please wait 1 minute and try again.')
-            if 'timeout' in err or 'timed out' in err:
+                raise Exception('Rate limit hit. Wait 1 minute and try again.')
+            if 'timeout' in err:
                 if attempt < retries:
                     time.sleep(5)
                     continue
-                raise Exception('Analysis timed out. Try uploading fewer papers.')
+                raise Exception('Analysis timed out. Try fewer papers.')
             raise e
 
 # ── SAFE JSON PARSE ──
@@ -168,6 +165,7 @@ def safe_parse_json(text):
         return json.loads(text)
     except json.JSONDecodeError:
         pass
+    # Try to extract partial clusters
     try:
         match = re.search(r'"clusters"\s*:\s*\[', text)
         if match:
@@ -182,91 +180,123 @@ def safe_parse_json(text):
                     if depth == 1: last_complete = i + 1
                 i += 1
             clusters_text = text[start:last_complete].rstrip(',')
-            minimal = f'{{"clusters": [{clusters_text}], "predictions": [], "study_plan": {{"strategy": "Focus on HIGH priority topics.", "days": [], "golden_topics": [], "dont_skip": []}}, "paper_pattern": {{}}}}'
+            minimal = f'{{"clusters":[{clusters_text}],"predictions":[],"study_plan":{{"strategy":"Focus on HIGH priority topics.","days":[],"golden_topics":[],"dont_skip":[]}},"paper_pattern":{{}}}}'
             return json.loads(minimal)
     except Exception:
         pass
-    raise json.JSONDecodeError("Could not parse response", text, 0)
+    raise json.JSONDecodeError("Could not parse", text, 0)
 
-# ── MAIN ANALYSIS ──
+# ── MAIN ANALYSIS — TWO-PASS APPROACH ──
 def analyze_with_groq(all_papers_text, user_name):
     client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
 
+    # Sort by year desc (latest first)
     sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
 
-    papers_content = ""
+    # ── PASS 1: Extract questions from each paper individually ──
+    # This ensures we read ALL questions from ALL pages
+    paper_questions = {}
     for paper_name, (text, _sort) in sorted_papers:
         if not text or len(text.strip()) < 50:
             continue
         questions_only = extract_questions_only(text)
         if len(questions_only.strip()) < 30:
-            questions_only = text[:2500]
-        else:
-            questions_only = questions_only[:5000]
-        papers_content += f"\n\n=== PAPER: {paper_name} ===\n{questions_only}"
+            questions_only = text
+        paper_questions[paper_name] = questions_only
+
+    # ── PASS 2: Build prompt with all questions ──
+    # Each paper gets its own section — no shared char limit
+    papers_content = ""
+    for paper_name, questions in paper_questions.items():
+        # Limit per paper to 6000 chars of pure question text
+        # At ~80 chars/question this = ~75 questions per paper — more than enough
+        papers_content += f"\n\n=== PAPER: {paper_name} ===\n{questions[:6000]}"
 
     if not papers_content.strip():
-        raise Exception("Could not read text from any of the papers")
+        raise Exception("Could not extract questions from any paper")
 
-    prompt = f"""You are an expert exam analyzer for engineering students in India (Mumbai University).
-Student: {user_name} | Papers: {len(all_papers_text)}
+    total_chars = len(papers_content)
 
-Papers (sorted latest first):
+    prompt = f"""You are an expert exam analyzer for Mumbai University engineering students.
+Student: {user_name} | Papers: {len(paper_questions)} | Total content: {total_chars} chars
+
+IMPORTANT: Read ALL questions from ALL papers carefully. Do not skip Q4, Q5, Q6 — they are equally important.
+
+Papers (latest first):
 {papers_content}
 
-Analyze like a smart student:
-1. Latest paper questions are the BASE
-2. Find same/similar questions across papers
-3. Note EXACT question number (Q1a, Q2B etc) and MARKS each time
-4. Find patterns — always Q1? Always 10 marks?
+YOUR TASK:
+1. Read every single question from every paper
+2. Find questions that repeat across papers — same topic even if wording differs
+3. Note the EXACT question number (Q1a, Q2A, Q3, Q4b etc) and MARKS for each occurrence
+4. Identify patterns — does it always appear in Q1? Always 10 marks?
+5. Create predictions based on what keeps appearing
 
-Return ONLY this JSON:
+CRITICAL: These topics MUST be checked specifically:
+- Two-pass assembler / Pass 1 flowchart
+- Forward reference problem  
+- Direct Linking Loader
+- Compiler phases
+- Code optimization techniques
+- Macro processor
+- Intermediate code / Three address code
+- Parser (SLR, LL(1), operator precedence)
+
+Return ONLY this exact JSON structure:
 {{
   "clusters": [
     {{
-      "topic": "topic name max 6 words",
-      "frequency": 3,
+      "topic": "exact topic name max 6 words",
+      "frequency": 4,
       "importance": "HIGH",
-      "questions": ["question from paper1", "question from paper2"],
-      "papers": ["May_2025", "Dec_2024"],
-      "question_positions": ["Q1a", "Q2B"],
-      "marks_each_time": [5, 10],
-      "consistent_position": true,
-      "consistent_marks": false,
-      "pattern_note": "Always in Q1, marks vary 5-10",
-      "tip": "practical exam tip",
-      "keywords": ["word1", "word2"]
+      "questions": ["exact Q from paper1", "exact Q from paper2", "exact Q from paper3"],
+      "papers": ["Nov_2023", "May_2023", "Dec_2024"],
+      "question_positions": ["Q2a", "Q6B", "Q2A"],
+      "marks_each_time": [10, 10, 10],
+      "consistent_position": false,
+      "consistent_marks": true,
+      "pattern_note": "Always 10 marks, position varies Q2-Q6",
+      "tip": "Draw the flowchart clearly, label all boxes",
+      "keywords": ["assembler", "pass1", "flowchart"]
     }}
   ],
   "predictions": [
     {{
-      "question": "predicted question text",
+      "question": "full predicted question text",
       "topic": "topic name",
       "confidence": "HIGH",
-      "reason": "why likely",
-      "likely_position": "Q1",
+      "reason": "appeared in all 4 papers",
+      "likely_position": "Q2",
       "likely_marks": 10,
-      "frequency": 3
+      "frequency": 4
     }}
   ],
   "paper_pattern": {{
-    "compulsory_question": "Q1 always compulsory, 4 parts of 5 marks",
-    "optional_questions": "Q2-Q6, attempt any 3, 20 marks each",
+    "compulsory_question": "Q1 always compulsory — 4 parts of 5 marks each = 20 marks",
+    "optional_questions": "Q2-Q6 attempt any 3, each worth 20 marks (2 parts x 10 marks)",
     "total_marks": 80,
     "duration": "3 hours",
-    "key_insight": "key pattern observation"
+    "key_insight": "Q1 tests breadth, Q2-Q6 test depth — prepare 6 topics well"
   }},
   "study_plan": {{
-    "strategy": "2-3 sentence strategy for {user_name}",
+    "strategy": "personalized 2-3 sentence strategy for {user_name}",
     "days": [
-      {{"day": 1, "focus": "topic", "priority": "HIGH", "hours": 3, "tasks": ["task1", "task2", "task3"]}}
+      {{"day": 1, "focus": "topic name", "priority": "HIGH", "hours": 3, "tasks": ["specific task 1", "specific task 2", "specific task 3"]}}
     ],
     "golden_topics": ["topic1", "topic2", "topic3"],
     "dont_skip": ["topic1", "topic2"]
   }}
 }}
 
-Rules: clusters 6-15 sorted by frequency, HIGH=3+papers, MEDIUM=2, LOW=1, predictions 8-10, exactly 7 days"""
+RULES:
+- clusters: minimum 8, maximum 15, sorted by frequency descending
+- HIGH = appeared in 3+ papers
+- MEDIUM = appeared in 2 papers  
+- LOW = appeared in 1 paper but important core topic
+- Each cluster must have a DISTINCT topic — do not mix unrelated questions
+- predictions: exactly 10 items
+- study_plan: exactly 7 days
+- Return ONLY the JSON — no markdown, no explanation, no extra text"""
 
     raw = call_groq_with_retry(client, prompt)
     return safe_parse_json(raw)
@@ -321,10 +351,8 @@ def analyze():
             file.save(filepath)
 
             try:
-                # Try normal text extraction first
                 text = extract_text_from_pdf(filepath)
 
-                # If too short → try OCR automatically
                 if not text or len(text.strip()) < 100:
                     try:
                         text = extract_text_via_ocr(filepath)
@@ -335,7 +363,7 @@ def analyze():
 
                 if not text or len(text.strip()) < 50:
                     return jsonify({
-                        'error': f'Could not read "{filename}". Please convert it at smallpdf.com using the OCR option and re-upload.'
+                        'error': f'Could not read "{filename}". Convert it at smallpdf.com using OCR option and re-upload.'
                     }), 400
 
                 all_papers_text[paper_name] = (text, sort_key)
@@ -343,6 +371,7 @@ def analyze():
                     paper_stats[paper_name] = {
                         'questions': max(text.count('Q.'), text.count('?'), 5),
                         'pages': len(pdf.pages),
+                        'chars': len(text),
                         'ocr': paper_name in ocr_used
                     }
             except Exception as e:
@@ -425,7 +454,7 @@ def export_results():
             f"   Pattern  : {c.get('pattern_note','')}",
             f"   Tip      : {c.get('tip','')}",
         ]
-        for q in c.get('questions', [])[:3]:
+        for q in c.get('questions', [])[:4]:
             lines.append(f"   • {q[:200]}")
 
     lines += ["", "━"*52, "PREDICTED QUESTIONS", "━"*52]
