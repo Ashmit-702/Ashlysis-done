@@ -27,7 +27,7 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-# ── PDF EXTRACTION ──
+# ── PDF TEXT EXTRACTION ──
 def extract_text_from_pdf(pdf_path):
     text = ""
     try:
@@ -46,8 +46,40 @@ def extract_text_from_pdf(pdf_path):
         raise Exception(f"Could not read PDF: {str(e)}")
     return text.strip()
 
-# ── TESSERACT OCR ──
+# ── ENHANCED TESSERACT OCR WITH IMAGE PRE-PROCESSING ──
+def enhance_image_for_ocr(img):
+    """Enhance image quality before OCR — removes watermarks, improves contrast"""
+    from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+    import numpy as np
+
+    # Convert to grayscale
+    if img.mode != 'L':
+        img = img.convert('L')
+
+    # Convert to numpy for processing
+    img_array = np.array(img)
+
+    # Step 1: Remove light watermarks using threshold
+    # Watermarks are usually light gray — make them white
+    img_array[img_array > 200] = 255
+
+    # Step 2: Increase contrast of dark text
+    img_array[img_array < 100] = 0
+
+    # Step 3: Convert back to PIL
+    img = Image.fromarray(img_array)
+
+    # Step 4: Sharpen
+    img = img.filter(ImageFilter.SHARPEN)
+
+    # Step 5: Enhance contrast further
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(2.0)
+
+    return img
+
 def extract_text_via_ocr(pdf_path):
+    """Enhanced OCR with image pre-processing for scanned PDFs"""
     try:
         import fitz
         import pytesseract
@@ -56,21 +88,36 @@ def extract_text_via_ocr(pdf_path):
 
         doc = fitz.open(pdf_path)
         all_text = []
+
         for page_num in range(len(doc)):
             page = doc[page_num]
+
+            # Render at 300 DPI for good accuracy
             mat = fitz.Matrix(300/72, 300/72)
-            pix = page.get_pixmap(matrix=mat, colorspace=fitz.csGRAY)
-            img = PILImage.open(_io.BytesIO(pix.tobytes("png")))
-            text = pytesseract.image_to_string(img, config=r'--oem 3 --psm 6')
+            pix = page.get_pixmap(matrix=mat)
+            img_bytes = pix.tobytes("png")
+
+            # Load as PIL image
+            img = PILImage.open(_io.BytesIO(img_bytes))
+
+            # Apply enhancement
+            img = enhance_image_for_ocr(img)
+
+            # OCR with best settings for printed text
+            custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:!?()-+*/=[]{}\'\" \n'
+            text = pytesseract.image_to_string(img, config=custom_config, lang='eng')
+
             if text.strip():
                 all_text.append(text)
+
         doc.close()
         return "\n".join(all_text).strip()
+    except ImportError:
+        return ""
     except Exception as e:
-        raise Exception(f"OCR failed: {str(e)}")
+        return ""
 
 # ── SMART QUESTION EXTRACTION ──
-# Extract ONLY question lines — keeps all Q1-Q6 regardless of position in file
 def extract_questions_only(text):
     lines = text.split('\n')
     question_lines = []
@@ -82,25 +129,26 @@ def extract_questions_only(text):
             continue
 
         is_q = bool(re.search(
-            r'^\s*Q\.?\s*\d+|^\s*\d{1,2}\s*[.)]\s*[A-Z(a-z]|'
-            r'explain|describe|define|discuss|construct|design|compare|'
-            r'differentiate|draw|write|state|list|what|how|why|derive|'
-            r'calculate|implement|short\s*note|advantages|disadvantages|'
-            r'elaborate|illustrate|justify|evaluate|analyze|generate|'
-            r'compute|solve|find|prove|show|demonstrate|flowchart|'
-            r'difference between|types of|working of|phases of|'
+            r'^\s*Q\.?\s*\d+|^\s*\d{1,2}\s*[.)]\s*[A-Za-z(]|'
+            r'\bexplain\b|\bdescribe\b|\bdefine\b|\bdiscuss\b|\bconstruct\b|'
+            r'\bdesign\b|\bcompare\b|\bdifferentiate\b|\bdraw\b|\bwrite\b|'
+            r'\bstate\b|\blist\b|\bwhat\b|\bhow\b|\bwhy\b|\bderive\b|'
+            r'\bcalculate\b|\bimplement\b|short\s*note|advantages|disadvantages|'
+            r'\belaborate\b|\billustrate\b|\bjustify\b|\bevaluate\b|\banalyze\b|'
+            r'\bgenerate\b|\bcompute\b|\bsolve\b|\bfind\b|\bprove\b|\bshow\b|'
+            r'flowchart|difference between|types of|working of|phases of|'
             r'with example|with suitable|with neat|with diagram',
             line, re.I
         ))
 
         if is_q and len(line) > 12:
-            # Grab this line + next continuation line if it exists
             combined = line
             if i + 1 < len(lines):
                 next_line = lines[i+1].strip()
-                if next_line and len(next_line) > 10 and not re.match(r'^\s*Q\.?\s*\d+|\d{1,2}\s*[.)]', next_line):
+                if next_line and len(next_line) > 10 and not re.match(
+                    r'^\s*Q\.?\s*\d+|\d{1,2}\s*[.)]', next_line):
                     combined += ' ' + next_line
-                    i += 1  # skip next line since we consumed it
+                    i += 1
             question_lines.append(combined[:350])
 
         i += 1
@@ -165,7 +213,6 @@ def safe_parse_json(text):
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    # Try to extract partial clusters
     try:
         match = re.search(r'"clusters"\s*:\s*\[', text)
         if match:
@@ -186,102 +233,138 @@ def safe_parse_json(text):
         pass
     raise json.JSONDecodeError("Could not parse", text, 0)
 
-# ── MAIN ANALYSIS — TWO-PASS APPROACH ──
-def analyze_with_groq(all_papers_text, user_name):
-    client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+# ── MAP STEP: Extract questions from single paper ──
+def map_extract_questions(client, paper_name, questions_text):
+    """Step 1 of map-reduce: ask Groq to extract clean questions from one paper"""
+    prompt = f"""Extract all exam questions from this paper. Return a JSON array of objects.
 
-    # Sort by year desc (latest first)
-    sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
+Paper: {paper_name}
 
-    # ── PASS 1: Extract questions from each paper individually ──
-    # This ensures we read ALL questions from ALL pages
-    paper_questions = {}
-    for paper_name, (text, _sort) in sorted_papers:
-        if not text or len(text.strip()) < 50:
-            continue
-        questions_only = extract_questions_only(text)
-        if len(questions_only.strip()) < 30:
-            questions_only = text
-        paper_questions[paper_name] = questions_only
+Content:
+{questions_text[:4000]}
 
-    # ── PASS 2: Build prompt with all questions ──
-    # Each paper gets its own section — no shared char limit
-    papers_content = ""
-    for paper_name, questions in paper_questions.items():
-        # Limit per paper to 6000 chars of pure question text
-        # At ~80 chars/question this = ~75 questions per paper — more than enough
-        papers_content += f"\n\n=== PAPER: {paper_name} ===\n{questions[:6000]}"
+Return ONLY a JSON array:
+[
+  {{
+    "position": "Q1a",
+    "question": "exact question text",
+    "marks": 5,
+    "topic_hint": "one word topic"
+  }}
+]
 
-    if not papers_content.strip():
-        raise Exception("Could not extract questions from any paper")
+Rules:
+- Include ALL questions Q1 through Q6
+- position format: Q1a, Q1b, Q2A, Q2B, Q3, Q4a etc
+- marks: integer, 0 if not visible
+- Extract the actual question text exactly as written
+- Return ONLY the JSON array"""
 
-    total_chars = len(papers_content)
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Extract exam questions. Return valid JSON array only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=2000
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = re.sub(r'^```(?:json)?\n?', '', raw)
+        raw = re.sub(r'\n?```$', '', raw).strip()
+        questions = json.loads(raw)
+        # Add paper name to each question
+        for q in questions:
+            q['paper'] = paper_name
+        return questions
+    except Exception:
+        return []
 
-    prompt = f"""You are an expert exam analyzer for Mumbai University engineering students.
-Student: {user_name} | Papers: {len(paper_questions)} | Total content: {total_chars} chars
+# ── REDUCE STEP: Find patterns across all papers ──
+def reduce_find_patterns(client, all_questions, user_name, num_papers):
+    """Step 2 of map-reduce: find repeating patterns across all papers"""
 
-IMPORTANT: Read ALL questions from ALL papers carefully. Do not skip Q4, Q5, Q6 — they are equally important.
+    # Format questions by paper
+    questions_by_paper = {}
+    for q in all_questions:
+        paper = q.get('paper', 'Unknown')
+        if paper not in questions_by_paper:
+            questions_by_paper[paper] = []
+        questions_by_paper[paper].append(q)
 
-Papers (latest first):
-{papers_content}
+    # Build compact representation
+    papers_summary = ""
+    for paper, questions in questions_by_paper.items():
+        papers_summary += f"\n--- {paper} ---\n"
+        for q in questions:
+            papers_summary += f"  {q.get('position','?')} [{q.get('marks',0)}m]: {q.get('question','')[:150]}\n"
 
-YOUR TASK:
-1. Read every single question from every paper
-2. Find questions that repeat across papers — same topic even if wording differs
-3. Note the EXACT question number (Q1a, Q2A, Q3, Q4b etc) and MARKS for each occurrence
-4. Identify patterns — does it always appear in Q1? Always 10 marks?
-5. Create predictions based on what keeps appearing
+    prompt = f"""You are analyzing {num_papers} Mumbai University exam papers for student: {user_name}
 
-CRITICAL: These topics MUST be checked specifically:
+Here are ALL extracted questions from ALL papers:
+{papers_summary}
+
+Find questions that repeat across papers. Same topic = same cluster even if wording differs.
+
+SPECIFICALLY look for these known repeat topics:
 - Two-pass assembler / Pass 1 flowchart
-- Forward reference problem  
-- Direct Linking Loader
+- Forward reference problem
+- Direct Linking Loader / Dynamic Linking Loader
 - Compiler phases
-- Code optimization techniques
-- Macro processor
-- Intermediate code / Three address code
-- Parser (SLR, LL(1), operator precedence)
+- Code optimization techniques (common subexpression, dead code, code motion, constant propagation)
+- Macro processor (single-pass, two-pass, macro calls within macros)
+- Intermediate code / Three address code / Basic blocks
+- Parser (SLR, LL(1), operator precedence, predictive)
+- Assembler statements / directives
+- System software vs application software
 
-Return ONLY this exact JSON structure:
+Return ONLY this JSON:
 {{
   "clusters": [
     {{
-      "topic": "exact topic name max 6 words",
+      "topic": "Two-pass Assembler Pass 1",
       "frequency": 4,
       "importance": "HIGH",
-      "questions": ["exact Q from paper1", "exact Q from paper2", "exact Q from paper3"],
+      "questions": ["Draw flowchart of pass1 of assembler...", "Explain Pass-I of two pass assembler...", "Draw and explain flowchart of Pass-I..."],
       "papers": ["Nov_2023", "May_2023", "Dec_2024"],
       "question_positions": ["Q2a", "Q6B", "Q2A"],
       "marks_each_time": [10, 10, 10],
       "consistent_position": false,
       "consistent_marks": true,
-      "pattern_note": "Always 10 marks, position varies Q2-Q6",
-      "tip": "Draw the flowchart clearly, label all boxes",
-      "keywords": ["assembler", "pass1", "flowchart"]
+      "pattern_note": "Always 10 marks, appears in Q2 or Q6",
+      "tip": "Draw the flowchart with all boxes clearly labeled — SYMTAB, LOCCTR, OPTAB",
+      "keywords": ["assembler", "pass1", "flowchart", "symtab"]
     }}
   ],
   "predictions": [
     {{
-      "question": "full predicted question text",
-      "topic": "topic name",
+      "question": "Draw the flowchart of Pass-I of two-pass assembler and explain its working with the databases used.",
+      "topic": "Two-pass Assembler Pass 1",
       "confidence": "HIGH",
-      "reason": "appeared in all 4 papers",
+      "reason": "Appeared in all 4 papers, always 10 marks",
       "likely_position": "Q2",
       "likely_marks": 10,
       "frequency": 4
     }}
   ],
   "paper_pattern": {{
-    "compulsory_question": "Q1 always compulsory — 4 parts of 5 marks each = 20 marks",
-    "optional_questions": "Q2-Q6 attempt any 3, each worth 20 marks (2 parts x 10 marks)",
+    "compulsory_question": "Q1 always compulsory — 4 sub-questions (a,b,c,d) of 5 marks each = 20 marks",
+    "optional_questions": "Q2 to Q6 — attempt any 3, each has 2 parts (A and B) of 10 marks each = 20 marks",
     "total_marks": 80,
     "duration": "3 hours",
-    "key_insight": "Q1 tests breadth, Q2-Q6 test depth — prepare 6 topics well"
+    "key_insight": "Q1 always tests 4 different short topics. For Q2-Q6, knowing 6 topics well enough to write 10-mark answers = guaranteed pass"
   }},
   "study_plan": {{
     "strategy": "personalized 2-3 sentence strategy for {user_name}",
     "days": [
-      {{"day": 1, "focus": "topic name", "priority": "HIGH", "hours": 3, "tasks": ["specific task 1", "specific task 2", "specific task 3"]}}
+      {{"day": 1, "focus": "topic name", "priority": "HIGH", "hours": 3, "tasks": ["task1", "task2", "task3"]}},
+      {{"day": 2, "focus": "topic name", "priority": "HIGH", "hours": 3, "tasks": ["task1", "task2", "task3"]}},
+      {{"day": 3, "focus": "topic name", "priority": "HIGH", "hours": 3, "tasks": ["task1", "task2", "task3"]}},
+      {{"day": 4, "focus": "topic name", "priority": "MEDIUM", "hours": 2, "tasks": ["task1", "task2", "task3"]}},
+      {{"day": 5, "focus": "topic name", "priority": "MEDIUM", "hours": 2, "tasks": ["task1", "task2", "task3"]}},
+      {{"day": 6, "focus": "topic name", "priority": "LOW", "hours": 2, "tasks": ["task1", "task2", "task3"]}},
+      {{"day": 7, "focus": "Full Revision + Mock", "priority": "HIGH", "hours": 4, "tasks": ["Revise all HIGH topics", "Attempt timed mock test", "Review weak areas", "Prepare cheat sheet"]}}
     ],
     "golden_topics": ["topic1", "topic2", "topic3"],
     "dont_skip": ["topic1", "topic2"]
@@ -289,17 +372,47 @@ Return ONLY this exact JSON structure:
 }}
 
 RULES:
-- clusters: minimum 8, maximum 15, sorted by frequency descending
-- HIGH = appeared in 3+ papers
-- MEDIUM = appeared in 2 papers  
-- LOW = appeared in 1 paper but important core topic
-- Each cluster must have a DISTINCT topic — do not mix unrelated questions
-- predictions: exactly 10 items
-- study_plan: exactly 7 days
-- Return ONLY the JSON — no markdown, no explanation, no extra text"""
+- clusters: 8-15 sorted by frequency desc
+- HIGH = 3+ papers, MEDIUM = 2, LOW = 1 but important
+- Each cluster = ONE distinct topic only — never mix unrelated questions
+- Do NOT group assembler + compiler + loader into one cluster
+- predictions: exactly 10
+- days: exactly 7
+- Return ONLY JSON"""
 
     raw = call_groq_with_retry(client, prompt)
     return safe_parse_json(raw)
+
+# ── MAIN ANALYSIS — MAP-REDUCE ──
+def analyze_with_groq(all_papers_text, user_name):
+    client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+
+    sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
+
+    # ── MAP: Extract questions from each paper ──
+    all_questions = []
+    for paper_name, (text, _sort) in sorted_papers:
+        if not text or len(text.strip()) < 50:
+            continue
+        questions_only = extract_questions_only(text)
+        if len(questions_only.strip()) < 30:
+            questions_only = text[:4000]
+        else:
+            questions_only = questions_only[:6000]
+
+        # Extract structured questions from this paper
+        paper_questions = map_extract_questions(client, paper_name, questions_only)
+        all_questions.extend(paper_questions)
+
+        # Small delay to avoid rate limiting
+        time.sleep(1)
+
+    if not all_questions:
+        raise Exception("Could not extract questions from papers")
+
+    # ── REDUCE: Find patterns across all papers ──
+    result = reduce_find_patterns(client, all_questions, user_name, len(sorted_papers))
+    return result
 
 
 @app.route('/')
@@ -355,15 +468,16 @@ def analyze():
 
                 if not text or len(text.strip()) < 100:
                     try:
-                        text = extract_text_via_ocr(filepath)
-                        if text and len(text.strip()) > 50:
+                        ocr_text = extract_text_via_ocr(filepath)
+                        if ocr_text and len(ocr_text.strip()) > 50:
+                            text = ocr_text
                             ocr_used.append(paper_name)
                     except Exception:
                         pass
 
                 if not text or len(text.strip()) < 50:
                     return jsonify({
-                        'error': f'Could not read "{filename}". Convert it at smallpdf.com using OCR option and re-upload.'
+                        'error': f'Could not read "{filename}". Convert at smallpdf.com using OCR option and re-upload.'
                     }), 400
 
                 all_papers_text[paper_name] = (text, sort_key)
