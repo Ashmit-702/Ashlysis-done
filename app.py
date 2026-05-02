@@ -48,34 +48,13 @@ def extract_text_from_pdf(pdf_path):
 
 # ── ENHANCED TESSERACT OCR WITH IMAGE PRE-PROCESSING ──
 def enhance_image_for_ocr(img):
-    """Enhance image quality before OCR — removes watermarks, improves contrast"""
-    from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-    import numpy as np
-
-    # Convert to grayscale
+    """Basic image enhancement"""
+    from PIL import ImageFilter, ImageEnhance
     if img.mode != 'L':
         img = img.convert('L')
-
-    # Convert to numpy for processing
-    img_array = np.array(img)
-
-    # Step 1: Remove light watermarks using threshold
-    # Watermarks are usually light gray — make them white
-    img_array[img_array > 200] = 255
-
-    # Step 2: Increase contrast of dark text
-    img_array[img_array < 100] = 0
-
-    # Step 3: Convert back to PIL
-    img = Image.fromarray(img_array)
-
-    # Step 4: Sharpen
     img = img.filter(ImageFilter.SHARPEN)
-
-    # Step 5: Enhance contrast further
     enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(2.0)
-
+    img = enhancer.enhance(1.5)
     return img
 
 def extract_text_via_ocr(pdf_path):
