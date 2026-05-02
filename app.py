@@ -466,7 +466,14 @@ def analyze():
             try:
                 text = extract_text_from_pdf(filepath)
 
-                if not text or len(text.strip()) < 100:
+                # Detect if PDF is scanned (text too short OR looks like garbage)
+                is_scanned = (
+                    not text or
+                    len(text.strip()) < 200 or
+                    len([c for c in text if c.isalpha()]) / max(len(text), 1) < 0.3
+                )
+
+                if is_scanned:
                     try:
                         ocr_text = extract_text_via_ocr(filepath)
                         if ocr_text and len(ocr_text.strip()) > 50:
@@ -477,7 +484,7 @@ def analyze():
 
                 if not text or len(text.strip()) < 50:
                     return jsonify({
-                        'error': f'Could not read "{filename}". Convert at smallpdf.com using OCR option and re-upload.'
+                        'error': f'Could not read "{filename}". This appears to be a scanned image PDF. Please convert it at smallpdf.com → select "OCR PDF" → download → re-upload.'
                     }), 400
 
                 all_papers_text[paper_name] = (text, sort_key)
