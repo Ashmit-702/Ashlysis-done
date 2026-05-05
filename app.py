@@ -327,7 +327,7 @@ def analyze_with_groq(all_papers_text, user_name, university, subject):
         if not text or len(text.strip()) < 50: continue
         qs = extract_questions_only(text)
         if len(qs.strip()) < 30: qs = text
-        papers_content += f"\n\n=== {paper_name} ===\n{qs[:5000]}"
+        papers_content += f"\n\n=== {paper_name} ===\n{qs[:2000]}"
 
     if not papers_content.strip():
         raise Exception("Could not extract questions from papers")
