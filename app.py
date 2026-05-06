@@ -51,8 +51,15 @@ def clean_pdf_text(text):
     for line in lines:
         line = line.strip()
         if not line or len(line) < 3: continue
+        # Skip solid hex watermarks e.g. "DB6A5D47F4D6..."
         if re.match(r'^[A-F0-9]{20,}$', line): continue
+        # Skip spaced hex watermarks e.g. "DB 6A 5D 47 ..." or "D B 6 A 5 D..."
+        if re.match(r'^([A-F0-9]{1,2}\s){6,}', line): continue
+        # Skip lines that are >80% hex characters (watermark noise)
+        hex_chars = len(re.findall(r'[A-F0-9]', line))
+        if len(line) > 20 and hex_chars / max(len(line.replace(' ','')), 1) > 0.75: continue
         if re.match(r'^[*_\-=.]{5,}$', line): continue
+        if len(line) < 12: continue  # skip very short noise lines
         line = re.sub(r'([a-z])([A-Z])', r'\1 \2', line)
         line = re.sub(r'(Q\.?\s*\d+)\.?([A-Za-z])', r'\1. \2', line)
         line = re.sub(r'[.\-_]{4,}', ' ', line)
@@ -80,9 +87,12 @@ def extract_text_from_pdf(pdf_path):
 
 def is_scanned_pdf(text):
     if not text or len(text.strip()) < 150: return True
-    alpha = len([c for c in text if c.isalpha()]) / max(len(text), 1)
-    if alpha < 0.3: return True
-    if not re.search(r'Q\.?\s*\d|explain|describe|define|discuss', text, re.I): return True
+    # Clean first then check
+    cleaned = clean_pdf_text(text)
+    if not cleaned or len(cleaned.strip()) < 100: return True
+    alpha = len([c for c in cleaned if c.isalpha()]) / max(len(cleaned), 1)
+    if alpha < 0.35: return True
+    if not re.search(r'Q\.?\s*\d|explain|describe|define|discuss|marks|attempt', cleaned, re.I): return True
     return False
 
 def extract_text_via_vision(pdf_path, groq_client):
@@ -136,7 +146,7 @@ def pre_extract_questions_json(paper_name, text, groq_client):
 
 Paper: {paper_name}
 Content:
-{text[:4000]}
+{text[:5500]}
 
 Return ONLY a JSON array. Each item must be unique — one question = one entry:
 [
@@ -266,7 +276,22 @@ def analyze_with_groq(all_papers_text, all_structured_questions, user_name, univ
     topic_list = SUBJECT_TOPICS.get(subject, SUBJECT_TOPICS['general'])
 
     # Build structured question table — prevents one Q being in two clusters
-    question_table = json.dumps(all_structured_questions, indent=2)[:8000]
+    # Ensure question_table includes questions from ALL papers
+    # Group by paper first, then flatten - guarantees every paper is represented
+    by_paper = {}
+    for q in all_structured_questions:
+        p = q.get('paper','unknown')
+        if p not in by_paper:
+            by_paper[p] = []
+        by_paper[p].append(q)
+
+    # Build balanced representation - each paper gets fair share
+    balanced = []
+    max_per_paper = max(20, 80 // max(len(by_paper), 1))
+    for paper, qs in sorted(by_paper.items()):
+        balanced.extend(qs[:max_per_paper])
+
+    question_table = json.dumps(balanced, indent=2)[:12000]
 
     prompt = f"""You are an expert exam analyzer for {uni_info['name']} students.
 Student: {user_name} | Subject: {subject.upper()} | Papers: {len(sorted_papers)}
@@ -451,9 +476,14 @@ def analyze():
     # Step 2: Pre-extract structured JSON questions from each paper
     all_structured_questions = []
     for paper_name, (text, _) in sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True):
-        questions = pre_extract_questions_json(paper_name, text, client)
+        # Clean text before pre-extraction to remove watermark noise
+        clean_text = clean_pdf_text(text)
+        questions = pre_extract_questions_json(paper_name, clean_text, client)
+        if not questions:
+            # Retry with raw text if cleaned version failed
+            questions = pre_extract_questions_json(paper_name, text, client)
         all_structured_questions.extend(questions)
-        time.sleep(0.5)  # small delay to avoid rate limiting
+        time.sleep(0.5)
 
     # Fallback if structured extraction failed
     if len(all_structured_questions) < 4:
