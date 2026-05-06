@@ -14,7 +14,6 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = '/tmp/ashlysis_uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# ── DAILY QUOTA ──
 _quota = {'date': str(date.today()), 'count': 0}
 DAILY_LIMIT = 100
 
@@ -27,94 +26,40 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-# ── UNIVERSITY + SUBJECT DATABASE (Fix 3 — hard-coded paper structure) ──
 UNIVERSITY_DB = {
     "mumbai_be": {
         "name": "Mumbai University — BE",
         "structure": "Q1 compulsory (4 parts × 5 marks = 20 marks). Q2-Q6 attempt any 3 (2 parts × 10 marks = 20 marks each). Total: 80 marks, 3 hours.",
-        "q1_marks": 5,
-        "optional_marks": 10,
-        "total_marks": 80,
-        "duration": "3 hours",
+        "q1_marks": 5, "optional_marks": 10, "total_marks": 80, "duration": "3 hours",
         "pattern": "Q1a/b/c/d = 5 marks each. Q2A/B through Q6A/B = 10 marks each."
     }
 }
 
 SUBJECT_TOPICS = {
-    "spcc": [
-        "Two-pass Assembler Pass 1 flowchart",
-        "Forward reference problem",
-        "Direct Linking Loader / Absolute Loader / Dynamic Loader",
-        "Phases of Compiler",
-        "Code Optimization techniques",
-        "Macro Processor single-pass / two-pass",
-        "Intermediate Code / Three Address Code / Basic Blocks",
-        "Parser SLR / LL(1) / Operator Precedence / Predictive",
-        "System Software vs Application Software",
-        "Assembler directives and statements"
-    ],
-    "dbms": [
-        "Normalization 1NF 2NF 3NF BCNF",
-        "SQL queries joins",
-        "ER diagram",
-        "Transaction ACID properties",
-        "Concurrency control",
-        "Relational algebra",
-        "Indexing B-tree",
-        "Recovery techniques"
-    ],
-    "os": [
-        "Process scheduling algorithms",
-        "Deadlock detection prevention",
-        "Memory management paging",
-        "Semaphore mutex",
-        "Virtual memory",
-        "File system",
-        "Disk scheduling",
-        "Process synchronization"
-    ],
-    "cn": [
-        "OSI model layers",
-        "TCP IP protocol",
-        "Routing algorithms",
-        "Congestion control",
-        "Error detection correction",
-        "Medium access control",
-        "Socket programming",
-        "Network security"
-    ],
-    "dsa": [
-        "Sorting algorithms time complexity",
-        "Tree traversal BST",
-        "Graph BFS DFS",
-        "Dynamic programming",
-        "Hashing",
-        "Stack queue linked list",
-        "Heap priority queue",
-        "Divide and conquer"
-    ],
-    "general": [
-        "Check every Q1-Q6 question in all papers for repeating topics"
-    ]
+    "spcc": ["Two-pass Assembler Pass 1 flowchart","Forward reference problem","Direct Linking Loader / Absolute Loader / Dynamic Loader","Phases of Compiler","Code Optimization techniques","Macro Processor single-pass / two-pass","Intermediate Code / Three Address Code / Basic Blocks","Parser SLR / LL(1) / Operator Precedence / Predictive","System Software vs Application Software","Assembler directives and statements"],
+    "dbms": ["Normalization 1NF 2NF 3NF BCNF","SQL queries joins","ER diagram","Transaction ACID properties","Concurrency control","Relational algebra","Indexing B-tree","Recovery techniques"],
+    "os": ["Process scheduling algorithms","Deadlock detection prevention","Memory management paging","Semaphore mutex","Virtual memory","File system","Disk scheduling","Process synchronization"],
+    "cn": ["OSI model layers","TCP IP protocol","Routing algorithms","Congestion control","Error detection correction","Medium access control","Socket programming","Network security"],
+    "mc": ["GSM Architecture","Mobile IP Agent Discovery","Handover mechanism","Frequency Reuse","IEEE 802.11 WLAN","GPRS architecture","UMTS 3G","LTE 4G","Bluetooth","Mobile TCP Snooping","Hidden Exposed station problem","WAP architecture"],
+    "dsa": ["Sorting algorithms time complexity","Tree traversal BST","Graph BFS DFS","Dynamic programming","Hashing","Stack queue linked list","Heap priority queue","Divide and conquer"],
+    "general": ["Check every Q1-Q6 question in all papers for repeating topics"]
 }
 
-# ── CLEAN PDF TEXT (Fix 1 — clean before sending to AI) ──
 def clean_pdf_text(text):
     lines = text.split('\n')
     clean = []
     for line in lines:
         line = line.strip()
         if not line or len(line) < 3: continue
-        if re.match(r'^[A-F0-9]{20,}$', line): continue  # hex watermarks
-        if re.match(r'^[*_\-=.]{5,}$', line): continue   # decoration
-        line = re.sub(r'([a-z])([A-Z])', r'\1 \2', line)  # fix merged words
+        if re.match(r'^[A-F0-9]{20,}$', line): continue
+        if re.match(r'^[*_\-=.]{5,}$', line): continue
+        line = re.sub(r'([a-z])([A-Z])', r'\1 \2', line)
         line = re.sub(r'(Q\.?\s*\d+)\.?([A-Za-z])', r'\1. \2', line)
         line = re.sub(r'[.\-_]{4,}', ' ', line)
         line = re.sub(r'\s+', ' ', line)
         clean.append(line)
     return '\n'.join(clean)
 
-# ── PDF EXTRACTION ──
 def extract_text_from_pdf(pdf_path):
     text = ""
     try:
@@ -133,7 +78,6 @@ def extract_text_from_pdf(pdf_path):
         raise Exception(f"Could not read PDF: {str(e)}")
     return clean_pdf_text(text.strip())
 
-# ── SCANNED PDF DETECTION ──
 def is_scanned_pdf(text):
     if not text or len(text.strip()) < 150: return True
     alpha = len([c for c in text if c.isalpha()]) / max(len(text), 1)
@@ -141,9 +85,8 @@ def is_scanned_pdf(text):
     if not re.search(r'Q\.?\s*\d|explain|describe|define|discuss', text, re.I): return True
     return False
 
-# ── GROQ VISION FOR SCANNED PDFs (Fix 5) ──
 def extract_text_via_vision(pdf_path, groq_client):
-    """Stitch all pages into ONE image — single API call per paper, fast"""
+    """Stitch all pages into ONE image — single API call per paper"""
     try:
         import fitz, base64
         from PIL import Image as PILImage
@@ -161,7 +104,6 @@ def extract_text_via_vision(pdf_path, groq_client):
         if not page_images:
             return ""
 
-        # Stitch all pages vertically into one image
         total_h = sum(img.height for img in page_images)
         max_w = max(img.width for img in page_images)
         stitched = PILImage.new('L', (max_w, total_h), 255)
@@ -171,14 +113,14 @@ def extract_text_via_vision(pdf_path, groq_client):
             y += img.height
 
         buf = _io.BytesIO()
-        stitched.save(buf, format='JPEG', quality=70, optimize=True)
+        stitched.save(buf, format='JPEG', quality=65, optimize=True)
         img_b64 = base64.b64encode(buf.getvalue()).decode()
 
         resp = groq_client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[{"role": "user", "content": [
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}},
-                {"type": "text", "text": "This is an engineering exam paper. Extract ALL questions from Q1 through Q6. Format: Q1a [5m]: question text. Include every sub-question. Plain text only."}
+                {"type": "text", "text": "Engineering exam paper. Extract ALL questions Q1-Q6 with position and marks. Format exactly: Q1a [5m]: question text. One per line. Plain text only."}
             ]}],
             max_tokens=2000, temperature=0.1
         )
@@ -187,81 +129,86 @@ def extract_text_via_vision(pdf_path, groq_client):
     except Exception:
         return ""
 
-# ── SMART QUESTION EXTRACTION ──
-def extract_questions_only(text):
-    lines = text.split('\n')
-    out = []
-    i = 0
-    while i < len(lines):
-        line = lines[i].strip()
-        if line and len(line) > 12 and re.search(
-            r'^\s*Q\.?\s*\d+|^\s*\d{1,2}\s*[.)]\s*[A-Za-z(]|'
-            r'\bexplain\b|\bdescribe\b|\bdefine\b|\bdiscuss\b|\bconstruct\b|'
-            r'\bdesign\b|\bcompare\b|\bdifferentiate\b|\bdraw\b|\bwrite\b|'
-            r'\bstate\b|\blist\b|\bwhat\b|\bhow\b|\bwhy\b|\bderive\b|'
-            r'\bcalculate\b|\bimplement\b|short\s*note|advantages|flowchart|'
-            r'difference between|types of|working of|phases of|with example',
-            line, re.I):
-            combined = line
-            if i+1 < len(lines):
-                nxt = lines[i+1].strip()
-                if nxt and len(nxt) > 10 and not re.match(r'^\s*Q\.?\s*\d+|\d{1,2}\s*[.)]', nxt):
-                    combined += ' ' + nxt
-                    i += 1
-            out.append(combined[:350])
-        i += 1
-    return '\n'.join(out)
+# ── PRE-EXTRACT STRUCTURED JSON (key accuracy fix) ──
+def pre_extract_questions_json(paper_name, text, groq_client):
+    """Extract questions as strict JSON — prevents one question being in two clusters"""
+    prompt = f"""Extract all exam questions from this paper as JSON.
 
-# ── FIX 6: CLUSTER VALIDATION — pure Python safety net ──
+Paper: {paper_name}
+Content:
+{text[:4000]}
+
+Return ONLY a JSON array. Each item must be unique — one question = one entry:
+[
+  {{"id": "{paper_name}_Q1a", "position": "Q1a", "marks": 5, "question": "exact question text here"}},
+  {{"id": "{paper_name}_Q1b", "position": "Q1b", "marks": 5, "question": "exact question text here"}},
+  {{"id": "{paper_name}_Q2A", "position": "Q2A", "marks": 10, "question": "exact question text here"}}
+]
+
+Rules:
+- Include ALL questions from Q1 through Q6
+- Each question gets a unique id like "{paper_name}_Q1a"
+- position: Q1a, Q1b, Q1c, Q1d, Q2A, Q2B, Q3A, Q3B etc
+- marks: integer (5 for Q1 parts, 10 for Q2-Q6 parts, 0 if unclear)
+- question: exact text of the question
+- One entry per question — never duplicate
+- Return ONLY the JSON array"""
+
+    try:
+        resp = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Extract exam questions as JSON array. No markdown. No explanation."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=2000
+        )
+        raw = resp.choices[0].message.content.strip()
+        raw = re.sub(r'^```(?:json)?\n?', '', raw)
+        raw = re.sub(r'\n?```$', '', raw).strip()
+        questions = json.loads(raw)
+        # Ensure all have paper field
+        for q in questions:
+            q['paper'] = paper_name
+        return questions
+    except Exception:
+        return []
+
 def validate_clusters(clusters, all_papers):
-    """Catch hallucinations and fix common errors automatically"""
     valid = []
     paper_names = set(all_papers.keys())
 
     for c in clusters:
-        # Fix 1: Remove papers not in uploaded set
         valid_papers = [p for p in c.get('papers', []) if any(
             p.lower() in name.lower() or name.lower() in p.lower()
             for name in paper_names
         )]
-        # If no valid papers matched, keep original (might be slight name diff)
         if not valid_papers:
             valid_papers = c.get('papers', [])
 
-        # Fix 2: Frequency can't exceed number of papers
         freq = min(c.get('frequency', 1), len(all_papers))
         freq = max(freq, len(valid_papers))
 
-        # Fix 3: Recalculate importance based on actual frequency
-        if freq >= 3:
-            importance = 'HIGH'
-        elif freq == 2:
-            importance = 'MEDIUM'
-        else:
-            importance = c.get('importance', 'LOW')
+        if freq >= 3: importance = 'HIGH'
+        elif freq == 2: importance = 'MEDIUM'
+        else: importance = c.get('importance', 'LOW')
 
-        # Fix 4: consistent_marks check — must ALL be same non-zero value
         marks = [m for m in c.get('marks_each_time', []) if m and m > 0]
         consistent_marks = len(set(marks)) == 1 if len(marks) > 1 else False
 
-        # Fix 5: consistent_position check
         positions = [p for p in c.get('question_positions', []) if p]
-        # Extract just Q number (Q1, Q2 etc) for comparison
         q_nums = [re.match(r'Q\d+', p, re.I).group() if re.match(r'Q\d+', p, re.I) else p for p in positions]
         consistent_position = len(set(q_nums)) == 1 if len(q_nums) > 1 else False
 
-        # Fix 6: Skip clusters with no real topic
         topic = c.get('topic', '').strip()
-        if not topic or len(topic) < 3:
-            continue
+        if not topic or len(topic) < 3: continue
 
-        # Fix 7: Cap questions list to match papers list length
         questions = c.get('questions', [])[:max(len(valid_papers), 1)]
 
         valid.append({
             **c,
-            'frequency': freq,
-            'importance': importance,
+            'frequency': freq, 'importance': importance,
             'papers': valid_papers if valid_papers else c.get('papers', []),
             'consistent_marks': consistent_marks,
             'consistent_position': consistent_position,
@@ -270,11 +217,9 @@ def validate_clusters(clusters, all_papers):
             'question_positions': positions
         })
 
-    # Sort by frequency descending
     valid.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
     return valid
 
-# ── PAPER NAME PARSER ──
 MONTH_MAP = {
     'jan':('January',1),'feb':('February',2),'mar':('March',3),
     'apr':('April',4),'may':('May',5),'jun':('June',6),
@@ -313,53 +258,49 @@ def safe_parse_json(text):
     except: pass
     raise json.JSONDecodeError("Cannot parse",text,0)
 
-# ── MAIN ANALYSIS ──
-def analyze_with_groq(all_papers_text, user_name, university, subject):
+def analyze_with_groq(all_papers_text, all_structured_questions, user_name, university, subject):
     client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
     sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
 
-    # Use university DB for paper structure
     uni_info = UNIVERSITY_DB.get(university, UNIVERSITY_DB['mumbai_be'])
     topic_list = SUBJECT_TOPICS.get(subject, SUBJECT_TOPICS['general'])
 
-    papers_content = ""
-    for paper_name, (text, _) in sorted_papers:
-        if not text or len(text.strip()) < 50: continue
-        qs = extract_questions_only(text)
-        if len(qs.strip()) < 30: qs = text
-        papers_content += f"\n\n=== {paper_name} ===\n{qs[:2000]}"
-
-    papers_content = papers_content[:15000]
-    if not papers_content.strip():
-        raise Exception("Could not extract questions from papers")
+    # Build structured question table — prevents one Q being in two clusters
+    question_table = json.dumps(all_structured_questions, indent=2)[:8000]
 
     prompt = f"""You are an expert exam analyzer for {uni_info['name']} students.
 Student: {user_name} | Subject: {subject.upper()} | Papers: {len(sorted_papers)}
 
-PAPER STRUCTURE (already known — use this, do not guess):
-{uni_info['structure']}
+PAPER STRUCTURE: {uni_info['structure']}
 
-EXAM PAPERS (read ALL questions Q1 through Q6 in EVERY paper):
-{papers_content}
+STRUCTURED QUESTIONS FROM ALL PAPERS (each question has a unique ID):
+{question_table}
 
-KNOWN IMPORTANT TOPICS FOR THIS SUBJECT (check every paper for each):
+IMPORTANT RULES FOR CLUSTERING:
+- Each question ID can appear in ONLY ONE cluster — never duplicate
+- Two questions from the SAME paper CANNOT be in the same cluster
+- A cluster means: same topic appeared in DIFFERENT papers
+- Check every question against all others for topic similarity
+
+KNOWN TOPICS FOR {subject.upper()} (find these specifically):
 {chr(10).join(f"- {t}" for t in topic_list)}
 
-Find every repeating topic. Return ONLY valid JSON:
+Return ONLY valid JSON:
 {{
   "clusters": [
     {{
       "topic": "exact topic name",
-      "frequency": 4,
+      "frequency": 3,
       "importance": "HIGH",
-      "questions": ["Q from paper1", "Q from paper2", "Q from paper3", "Q from paper4"],
-      "papers": ["Nov_2023","May_2023","Dec_2024","May_2025"],
-      "question_positions": ["Q2a","Q6B","Q2A","Q2A"],
-      "marks_each_time": [10,10,10,10],
+      "questions": ["exact Q text from paper1", "exact Q text from paper2", "exact Q text from paper3"],
+      "papers": ["Nov_2023","May_2023","Dec_2024"],
+      "question_positions": ["Q2A","Q3B","Q2A"],
+      "marks_each_time": [10,10,10],
+      "question_ids": ["Nov_2023_Q2A","May_2023_Q3B","Dec_2024_Q2A"],
       "consistent_position": false,
       "consistent_marks": true,
-      "pattern_note": "Always 10 marks, appears in Q2 or Q6",
-      "tip": "specific actionable exam tip",
+      "pattern_note": "Always 10 marks, appears in Q2 or Q3",
+      "tip": "specific actionable tip",
       "keywords": ["keyword1","keyword2"]
     }}
   ],
@@ -368,10 +309,10 @@ Find every repeating topic. Return ONLY valid JSON:
       "question": "full predicted question text",
       "topic": "topic name",
       "confidence": "HIGH",
-      "reason": "why likely to appear",
+      "reason": "appeared in 3/4 papers always 10 marks",
       "likely_position": "Q2A",
       "likely_marks": 10,
-      "frequency": 4
+      "frequency": 3
     }}
   ],
   "paper_pattern": {{
@@ -379,7 +320,7 @@ Find every repeating topic. Return ONLY valid JSON:
     "optional_questions": "Q2-Q6 attempt any 3, Part A and B of 10 marks each",
     "total_marks": {uni_info['total_marks']},
     "duration": "{uni_info['duration']}",
-    "key_insight": "specific insight about this subject's paper pattern"
+    "key_insight": "specific insight about this subject paper pattern"
   }},
   "study_plan": {{
     "strategy": "2-3 sentence strategy for {user_name} for {subject.upper()} exam",
@@ -390,15 +331,15 @@ Find every repeating topic. Return ONLY valid JSON:
       {{"day":4,"focus":"topic","priority":"MEDIUM","hours":2,"tasks":["task1","task2","task3"]}},
       {{"day":5,"focus":"topic","priority":"MEDIUM","hours":2,"tasks":["task1","task2","task3"]}},
       {{"day":6,"focus":"topic","priority":"LOW","hours":2,"tasks":["task1","task2"]}},
-      {{"day":7,"focus":"Full Revision + Mock Test","priority":"HIGH","hours":4,"tasks":["Revise all HIGH topics","Attempt timed mock","Review weak areas","Prepare quick reference sheet"]}}
+      {{"day":7,"focus":"Full Revision + Mock Test","priority":"HIGH","hours":4,"tasks":["Revise all HIGH topics","Timed mock test","Review weak areas","Quick reference sheet"]}}
     ],
     "golden_topics": ["topic1","topic2","topic3"],
     "dont_skip": ["topic1","topic2"]
   }}
 }}
 
-RULES: clusters 10-15 sorted by frequency desc. HIGH=3+papers MEDIUM=2 LOW=1.
-ONE topic per cluster — never mix assembler+loader+compiler.
+STRICT: clusters 10-15 sorted freq desc. HIGH=3+ MEDIUM=2 LOW=1.
+ONE topic per cluster. Each question_id used ONCE only.
 predictions exactly 10. days exactly 7. Return ONLY JSON."""
 
     for attempt in range(3):
@@ -406,7 +347,7 @@ predictions exactly 10. days exactly 7. Return ONLY JSON."""
             resp = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role":"system","content":"Expert exam analyzer. Return valid JSON only. No markdown."},
+                    {"role":"system","content":"Expert exam analyzer. Return valid JSON only. No markdown. Each question ID must appear in only one cluster."},
                     {"role":"user","content":prompt}
                 ],
                 temperature=0.1,
@@ -433,15 +374,14 @@ def index():
 @app.route('/universities', methods=['GET'])
 def get_universities():
     return jsonify({
-        'universities': [
-            {'id': 'mumbai_be', 'name': 'Mumbai University — BE/BTech'}
-        ],
+        'universities': [{'id': 'mumbai_be', 'name': 'Mumbai University — BE/BTech'}],
         'subjects': {
             'mumbai_be': [
                 {'id': 'spcc', 'name': 'System Programming & Compiler Construction'},
                 {'id': 'dbms', 'name': 'Database Management Systems'},
                 {'id': 'os', 'name': 'Operating Systems'},
                 {'id': 'cn', 'name': 'Computer Networks'},
+                {'id': 'mc', 'name': 'Mobile Computing'},
                 {'id': 'dsa', 'name': 'Data Structures & Algorithms'},
                 {'id': 'general', 'name': 'Other Subject'}
             ]
@@ -456,8 +396,8 @@ def analyze():
     files = request.files.getlist('files')
     if len(files) < 2:
         return jsonify({'error': 'Upload at least 2 PYQ papers.'}), 400
-    if len(files) > 10:
-        return jsonify({'error': 'Maximum 10 papers.'}), 400
+    if len(files) > 8:
+        return jsonify({'error': 'Maximum 8 papers for best accuracy.'}), 400
     non_pdf = [f.filename for f in files if not f.filename.lower().endswith('.pdf')]
     if non_pdf:
         return jsonify({'error': f'Only PDFs supported. Remove: {", ".join(non_pdf)}'}), 400
@@ -477,6 +417,7 @@ def analyze():
     paper_stats = {}
     ocr_used = []
 
+    # Step 1: Extract text from all PDFs
     for file in files:
         if not (file and file.filename.lower().endswith('.pdf')): continue
         filename = secure_filename(file.filename)
@@ -507,8 +448,27 @@ def analyze():
     if len(all_papers_text) < 2:
         return jsonify({'error': 'Need at least 2 readable papers.'}), 400
 
+    # Step 2: Pre-extract structured JSON questions from each paper
+    all_structured_questions = []
+    for paper_name, (text, _) in sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True):
+        questions = pre_extract_questions_json(paper_name, text, client)
+        all_structured_questions.extend(questions)
+        time.sleep(0.5)  # small delay to avoid rate limiting
+
+    # Fallback if structured extraction failed
+    if len(all_structured_questions) < 4:
+        all_structured_questions = []
+        for paper_name, (text, _) in all_papers_text.items():
+            all_structured_questions.append({
+                "id": f"{paper_name}_raw",
+                "paper": paper_name,
+                "position": "unknown",
+                "marks": 0,
+                "question": text[:500]
+            })
+
     try:
-        result = analyze_with_groq(all_papers_text, user_name, university, subject)
+        result = analyze_with_groq(all_papers_text, all_structured_questions, user_name, university, subject)
         clusters = validate_clusters(result.get('clusters', []), all_papers_text)
         predictions = result.get('predictions', [])
         study_plan = result.get('study_plan', {})
@@ -526,7 +486,7 @@ def analyze():
         'subject': subject.upper(),
         'stats': {
             'papers': len(all_papers_text),
-            'total_questions': sum(s.get('chars',0)//80 for s in paper_stats.values()),
+            'total_questions': len(all_structured_questions),
             'clusters': len(clusters),
             'high_priority': len([c for c in clusters if c.get('importance')=='HIGH']),
             'paper_stats': paper_stats
@@ -556,6 +516,7 @@ def export_results():
         f"Subject    : {subject}",
         f"Date       : {datetime.now().strftime('%d %b %Y %I:%M %p')}",
         f"Papers     : {stats.get('papers',0)}",
+        f"Questions  : {stats.get('total_questions',0)}",
         f"Clusters   : {stats.get('clusters',0)}",
         f"HIGH       : {stats.get('high_priority',0)}",
     ]
