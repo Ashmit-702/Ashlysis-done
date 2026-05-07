@@ -4,6 +4,8 @@ import re
 import io
 import time
 from datetime import datetime, date
+import gc
+import threading
 import pdfplumber
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
@@ -13,6 +15,9 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = '/tmp/ashlysis_uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# ── CONCURRENT REQUEST GUARD ──
+_analysis_lock = threading.Semaphore(1)
 
 _quota = {'date': str(date.today()), 'count': 0}
 DAILY_LIMIT = 100
@@ -421,8 +426,8 @@ def analyze():
     files = request.files.getlist('files')
     if len(files) < 2:
         return jsonify({'error': 'Upload at least 2 PYQ papers.'}), 400
-    if len(files) > 8:
-        return jsonify({'error': 'Maximum 8 papers for best accuracy.'}), 400
+    if len(files) > 6:
+        return jsonify({'error': 'Maximum 6 papers for best accuracy.'}), 400
     non_pdf = [f.filename for f in files if not f.filename.lower().endswith('.pdf')]
     if non_pdf:
         return jsonify({'error': f'Only PDFs supported. Remove: {", ".join(non_pdf)}'}), 400
@@ -436,6 +441,11 @@ def analyze():
 
     try: check_quota()
     except Exception as e: return jsonify({'error': str(e)}), 429
+
+    # Only 1 analysis at a time — prevents RAM crash on simultaneous users
+    acquired = _analysis_lock.acquire(blocking=False)
+    if not acquired:
+        return jsonify({'error': 'Server is busy analyzing another request. Please wait 30 seconds and try again.'}), 429
 
     client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
     all_papers_text = {}
@@ -469,6 +479,7 @@ def analyze():
             return jsonify({'error': f'Failed: "{filename}": {str(e)}'}), 500
         finally:
             if os.path.exists(filepath): os.remove(filepath)
+            gc.collect()  # release RAM immediately
 
     if len(all_papers_text) < 2:
         return jsonify({'error': 'Need at least 2 readable papers.'}), 400
@@ -504,10 +515,15 @@ def analyze():
         study_plan = result.get('study_plan', {})
         paper_pattern = result.get('paper_pattern', {})
     except json.JSONDecodeError:
+        _analysis_lock.release()
         return jsonify({'error': 'Analysis failed. Please try again.'}), 500
     except Exception as e:
+        _analysis_lock.release()
         return jsonify({'error': str(e)}), 500
+    finally:
+        gc.collect()  # clean up after full analysis
 
+    _analysis_lock.release()
     return jsonify({
         'clusters': clusters, 'predictions': predictions,
         'study_plan': study_plan, 'paper_pattern': paper_pattern,
