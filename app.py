@@ -45,9 +45,36 @@ UNIVERSITY_DB = {
 SUBJECT_TOPICS = {
     "spcc": ["Two-pass Assembler Pass 1 flowchart","Forward reference problem","Direct Linking Loader / Absolute Loader / Dynamic Loader","Phases of Compiler","Code Optimization techniques","Macro Processor single-pass / two-pass","Intermediate Code / Three Address Code / Basic Blocks","Parser SLR / LL(1) / Operator Precedence / Predictive","System Software vs Application Software","Assembler directives and statements"],
     "dbms": ["Normalization 1NF 2NF 3NF BCNF","SQL queries joins","ER diagram","Transaction ACID properties","Concurrency control","Relational algebra","Indexing B-tree","Recovery techniques"],
-    "os": ["Process scheduling algorithms","Deadlock detection prevention","Memory management paging","Semaphore mutex","Virtual memory","File system","Disk scheduling","Process synchronization"],
+    "os": [
+        "Process scheduling algorithms FCFS SJF Round Robin Priority",
+        "Deadlock detection prevention avoidance Bankers algorithm",
+        "Memory management paging segmentation",
+        "Semaphore mutex critical section producer consumer",
+        "Virtual memory page replacement LRU FIFO Optimal",
+        "File system allocation methods directory structure",
+        "Disk scheduling SSTF SCAN C-SCAN",
+        "Process synchronization monitors",
+        "Thrashing working set model",
+        "Inter process communication IPC",
+    ],
     "cn": ["OSI model layers","TCP IP protocol","Routing algorithms","Congestion control","Error detection correction","Medium access control","Socket programming","Network security"],
-    "mc": ["GSM Architecture","Mobile IP Agent Discovery","Handover mechanism","Frequency Reuse","IEEE 802.11 WLAN","GPRS architecture","UMTS 3G","LTE 4G","Bluetooth","Mobile TCP Snooping","Hidden Exposed station problem","WAP architecture"],
+    "mc": [
+        "GSM System Architecture (BSS NSS OSS components)",
+        "GPRS Architecture (SGSN GGSN — separate from GSM)",
+        "Mobile Terminated Call and Mobile Originated Call procedure",
+        "Handover mechanisms in GSM (hard soft inter-cell)",
+        "GSM Security: A3 A5 A8 authentication algorithms",
+        "Snooping TCP and Mobile TCP merits demerits",
+        "Mobile IP packet delivery agent discovery registration",
+        "Tunnelling and Encapsulation in Mobile IP",
+        "IEEE 802.11 WLAN protocol architecture MAC layer",
+        "Hidden station and Exposed station problem CSMA",
+        "Frequency Reuse cell clustering co-channel interference",
+        "LTE 4G Architecture and UMTS 3G components",
+        "Bluetooth protocol stack piconet scatternet",
+        "WAP architecture and wireless application protocol",
+        "Spread Spectrum FHSS DSSS techniques",
+    ],
     "dsa": ["Sorting algorithms time complexity","Tree traversal BST","Graph BFS DFS","Dynamic programming","Hashing","Stack queue linked list","Heap priority queue","Divide and conquer"],
     "general": ["Check every Q1-Q6 question in all papers for repeating topics"]
 }
@@ -206,6 +233,55 @@ def validate_clusters(clusters, all_papers):
         })
     valid.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
     return valid
+# ── FIX: POST-PROCESSING DEDUPLICATION ──
+def deduplicate_clusters(clusters):
+    """Remove same-paper duplicates and cross-cluster question duplicates"""
+    seen_question_ids = set()
+
+    for cluster in clusters:
+        papers = cluster.get('papers', [])
+        positions = cluster.get('question_positions', [])
+        questions = cluster.get('questions', [])
+        marks = cluster.get('marks_each_time', [])
+
+        # Step 1: remove duplicate papers within this cluster
+        seen_papers = set()
+        clean_idx = []
+        for i, paper in enumerate(papers):
+            paper_key = paper.lower().replace('_','').replace('-','')
+            if paper_key not in seen_papers:
+                seen_papers.add(paper_key)
+                clean_idx.append(i)
+
+        # Step 2: remove questions already used in another cluster
+        final_idx = []
+        for i in clean_idx:
+            pos = positions[i] if i < len(positions) else ''
+            paper = papers[i] if i < len(papers) else ''
+            qid = f"{paper}_{pos}".lower()
+            if qid not in seen_question_ids:
+                seen_question_ids.add(qid)
+                final_idx.append(i)
+
+        # Rebuild cluster with clean data
+        cluster['papers'] = [papers[i] for i in final_idx if i < len(papers)]
+        cluster['question_positions'] = [positions[i] for i in final_idx if i < len(positions)]
+        cluster['questions'] = [questions[i] for i in final_idx if i < len(questions)]
+        cluster['marks_each_time'] = [marks[i] for i in final_idx if i < len(marks)]
+        cluster['frequency'] = len(cluster['papers'])
+
+        # Recalculate importance
+        f = cluster['frequency']
+        if f >= 3: cluster['importance'] = 'HIGH'
+        elif f == 2: cluster['importance'] = 'MEDIUM'
+        else: cluster['importance'] = 'LOW'
+
+    # Remove empty clusters, sort by frequency
+    result = [c for c in clusters if c.get('frequency', 0) >= 1]
+    result.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
+    return result
+
+
 
 # ── PAPER NAME PARSER ──
 MONTH_MAP = {
@@ -278,8 +354,11 @@ PAPER STRUCTURE: {uni_info['structure']}
 ALL EXAM PAPERS — read every single question in every paper:
 {papers_content}
 
-KNOWN TOPICS FOR {subject.upper()} — find each one across all papers:
+FIND EACH OF THESE AS A SEPARATE CLUSTER — never merge two topics from this list:
 {chr(10).join(f"- {t}" for t in topic_list)}
+
+Even if a topic appears in only 1 paper, give it its own LOW cluster.
+Never group two different topics into one cluster.
 
 CRITICAL RULES:
 - One question can only belong to ONE cluster
@@ -339,8 +418,17 @@ Return ONLY valid JSON:
   }}
 }}
 
-STRICT: clusters 10-15 freq desc. HIGH=3+ MEDIUM=2 LOW=1.
-ONE topic per cluster. predictions 10. days 7. Return ONLY JSON."""
+STRICT RULES:
+- clusters 10-15 sorted by frequency descending
+- HIGH=3+ papers, MEDIUM=2 papers, LOW=1 paper
+- ONE topic per cluster — NEVER merge different topics
+- EACH PAPER NAME can appear MAXIMUM ONCE per cluster
+- If 2 questions from the SAME paper cover the same topic, include only the most specific one
+- Two questions from the same paper = NOT a cross-paper repeat
+- Find EACH topic from the known topics list as its own SEPARATE cluster
+- Do NOT group different topics together even if vaguely related
+- predictions exactly 10, days exactly 7
+Return ONLY JSON."""
 
     for attempt in range(3):
         try:
@@ -360,10 +448,11 @@ ONE topic per cluster. predictions 10. days 7. Return ONLY JSON."""
         except Exception as e:
             err = str(e).lower()
             if 'rate' in err or '429' in err:
+                wait = 15 if attempt == 0 else 30
                 if attempt < 2:
-                    time.sleep(35)
+                    time.sleep(wait)
                     continue
-                raise Exception('Rate limit reached. Please wait 1 minute and try again.')
+                raise Exception(f'AI is busy. Please wait 30 seconds and click Analyze again.')
             raise e
 
 
@@ -457,6 +546,7 @@ def analyze():
 
         result = analyze_with_groq(all_papers_text, user_name, university, subject)
         clusters = validate_clusters(result.get('clusters', []), all_papers_text)
+        clusters = deduplicate_clusters(clusters)  # remove same-paper duplicates
         predictions = result.get('predictions', [])
         study_plan = result.get('study_plan', {})
         paper_pattern = result.get('paper_pattern', {})
