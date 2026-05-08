@@ -5,6 +5,8 @@ import io
 import gc
 import time
 import threading
+import math
+from collections import Counter, defaultdict
 from datetime import datetime, date
 import pdfplumber
 from flask import Flask, render_template, request, jsonify, send_file
@@ -16,10 +18,7 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = '/tmp/ashlysis_uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# ── CONCURRENT GUARD — 1 analysis at a time ──
 _analysis_lock = threading.Semaphore(1)
-
-# ── DAILY QUOTA ──
 _quota = {'date': str(date.today()), 'count': 0}
 DAILY_LIMIT = 80
 
@@ -32,7 +31,6 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-# ── UNIVERSITY DB ──
 UNIVERSITY_DB = {
     "mumbai_be": {
         "name": "Mumbai University — BE",
@@ -43,39 +41,76 @@ UNIVERSITY_DB = {
 }
 
 SUBJECT_TOPICS = {
-    "spcc": ["Two-pass Assembler Pass 1 flowchart","Forward reference problem","Direct Linking Loader / Absolute Loader / Dynamic Loader","Phases of Compiler","Code Optimization techniques","Macro Processor single-pass / two-pass","Intermediate Code / Three Address Code / Basic Blocks","Parser SLR / LL(1) / Operator Precedence / Predictive","System Software vs Application Software","Assembler directives and statements"],
-    "dbms": ["Normalization 1NF 2NF 3NF BCNF","SQL queries joins","ER diagram","Transaction ACID properties","Concurrency control","Relational algebra","Indexing B-tree","Recovery techniques"],
+    "spcc": [
+        "Two-pass Assembler Pass 1 flowchart",
+        "Forward reference problem",
+        "Direct Linking Loader Absolute Loader Dynamic Loader",
+        "Phases of Compiler",
+        "Code Optimization techniques dead code common subexpression",
+        "Macro Processor single-pass two-pass",
+        "Intermediate Code Three Address Code Basic Blocks Flow Graph",
+        "Parser SLR LL1 Operator Precedence Predictive",
+        "System Software vs Application Software",
+        "Assembler directives and statements"
+    ],
+    "mc": [
+        "GSM System Architecture BSS NSS OSS",
+        "GPRS Architecture SGSN GGSN",
+        "Mobile Terminated Call Mobile Originated Call",
+        "Handover mechanisms GSM hard soft inter-cell",
+        "GSM Security A3 A5 A8 authentication",
+        "Snooping TCP Mobile TCP",
+        "Mobile IP agent discovery registration tunnelling",
+        "IEEE 802.11 WLAN MAC protocol",
+        "Hidden station Exposed station problem",
+        "Frequency Reuse cell clustering co-channel",
+        "LTE 4G UMTS 3G architecture",
+        "Bluetooth protocol stack piconet",
+        "WAP architecture",
+        "Spread Spectrum FHSS DSSS"
+    ],
     "os": [
-        "Process scheduling algorithms FCFS SJF Round Robin Priority",
+        "Process scheduling FCFS SJF Round Robin Priority",
         "Deadlock detection prevention avoidance Bankers algorithm",
         "Memory management paging segmentation",
         "Semaphore mutex critical section producer consumer",
         "Virtual memory page replacement LRU FIFO Optimal",
-        "File system allocation methods directory structure",
+        "File system allocation directory structure",
         "Disk scheduling SSTF SCAN C-SCAN",
         "Process synchronization monitors",
-        "Thrashing working set model",
-        "Inter process communication IPC",
+        "Thrashing working set",
+        "Inter process communication IPC"
     ],
-    "cn": ["OSI model layers","TCP IP protocol","Routing algorithms","Congestion control","Error detection correction","Medium access control","Socket programming","Network security"],
-    "mc": [
-        "GSM System Architecture (BSS NSS OSS components)",
-        "GPRS Architecture (SGSN GGSN — separate from GSM)",
-        "Mobile Terminated Call and Mobile Originated Call procedure",
-        "Handover mechanisms in GSM (hard soft inter-cell)",
-        "GSM Security: A3 A5 A8 authentication algorithms",
-        "Snooping TCP and Mobile TCP merits demerits",
-        "Mobile IP packet delivery agent discovery registration",
-        "Tunnelling and Encapsulation in Mobile IP",
-        "IEEE 802.11 WLAN protocol architecture MAC layer",
-        "Hidden station and Exposed station problem CSMA",
-        "Frequency Reuse cell clustering co-channel interference",
-        "LTE 4G Architecture and UMTS 3G components",
-        "Bluetooth protocol stack piconet scatternet",
-        "WAP architecture and wireless application protocol",
-        "Spread Spectrum FHSS DSSS techniques",
+    "dbms": [
+        "Normalization 1NF 2NF 3NF BCNF",
+        "SQL queries joins",
+        "ER diagram",
+        "Transaction ACID properties",
+        "Concurrency control",
+        "Relational algebra",
+        "Indexing B-tree",
+        "Recovery techniques"
     ],
-    "dsa": ["Sorting algorithms time complexity","Tree traversal BST","Graph BFS DFS","Dynamic programming","Hashing","Stack queue linked list","Heap priority queue","Divide and conquer"],
+    "cn": [
+        "OSI model layers",
+        "TCP IP protocol",
+        "Routing algorithms",
+        "Congestion control",
+        "Error detection correction",
+        "Medium access control",
+        "Socket programming",
+        "Network security"
+    ],
+    "dsa": [
+        "Sorting algorithms time complexity",
+        "Tree traversal BST",
+        "Graph BFS DFS",
+        "Dynamic programming",
+        "Hashing",
+        "Stack queue linked list",
+        "Heap priority queue",
+        "Divide and conquer"
+    ],
     "general": ["Check every Q1-Q6 question in all papers for repeating topics"]
 }
 
@@ -117,7 +152,6 @@ def extract_text_from_pdf(pdf_path):
         raise Exception(f"Could not read PDF: {str(e)}")
     return clean_pdf_text(text.strip())
 
-# ── SCANNED PDF DETECTION ──
 def is_scanned_pdf(text):
     if not text or len(text.strip()) < 150: return True
     cleaned = clean_pdf_text(text)
@@ -127,7 +161,6 @@ def is_scanned_pdf(text):
     if not re.search(r'Q\.?\s*\d|explain|describe|define|discuss|marks|attempt', cleaned, re.I): return True
     return False
 
-# ── GROQ VISION FOR SCANNED PDFs — single call per paper ──
 def extract_text_via_vision(pdf_path, groq_client):
     try:
         import fitz, base64
@@ -144,8 +177,7 @@ def extract_text_via_vision(pdf_path, groq_client):
         doc.close()
         gc.collect()
 
-        if not page_images:
-            return ""
+        if not page_images: return ""
 
         total_h = sum(img.height for img in page_images)
         max_w = max(img.width for img in page_images)
@@ -174,233 +206,248 @@ def extract_text_via_vision(pdf_path, groq_client):
     except Exception:
         return ""
 
-# ── QUESTION EXTRACTION ──
-def extract_questions_only(text):
-    lines = text.split('\n')
-    out = []
-    i = 0
-    while i < len(lines):
-        line = lines[i].strip()
-        if line and len(line) > 12 and re.search(
-            r'^\s*Q\.?\s*\d+|^\s*\d{1,2}\s*[.)]\s*[A-Za-z(]|'
-            r'\bexplain\b|\bdescribe\b|\bdefine\b|\bdiscuss\b|\bconstruct\b|'
-            r'\bdesign\b|\bcompare\b|\bdifferentiate\b|\bdraw\b|\bwrite\b|'
-            r'\bstate\b|\blist\b|\bwhat\b|\bhow\b|\bwhy\b|\bderive\b|'
-            r'\bcalculate\b|\bimplement\b|short\s*note|advantages|flowchart|'
-            r'difference between|types of|working of|phases of|with example',
-            line, re.I):
-            combined = line
-            if i+1 < len(lines):
-                nxt = lines[i+1].strip()
-                if nxt and len(nxt) > 10 and not re.match(r'^\s*Q\.?\s*\d+|\d{1,2}\s*[.)]', nxt):
-                    combined += ' ' + nxt
-                    i += 1
-            out.append(combined[:300])
-        i += 1
-    return '\n'.join(out)
+# ── STEP 1: EXTRACT QUESTIONS AS JSON (per paper) ──
+def extract_questions_as_json(paper_name, text, client):
+    """Groq job 1: extract structured questions from one paper"""
+    prompt = f"""Extract ALL exam questions from this paper as a JSON array.
 
-# ── CLUSTER VALIDATION ──
-def validate_clusters(clusters, all_papers):
-    valid = []
-    paper_names = set(all_papers.keys())
-    for c in clusters:
-        valid_papers = [p for p in c.get('papers', []) if any(
-            p.lower() in name.lower() or name.lower() in p.lower()
-            for name in paper_names
-        )]
-        if not valid_papers:
-            valid_papers = c.get('papers', [])
-        freq = min(c.get('frequency', 1), len(all_papers))
-        freq = max(freq, len(valid_papers))
-        if freq >= 3: importance = 'HIGH'
-        elif freq == 2: importance = 'MEDIUM'
-        else: importance = c.get('importance', 'LOW')
-        marks = [m for m in c.get('marks_each_time', []) if m and m > 0]
-        consistent_marks = len(set(marks)) == 1 if len(marks) > 1 else False
-        positions = [p for p in c.get('question_positions', []) if p]
-        q_nums = [re.match(r'Q\d+', p, re.I).group() if re.match(r'Q\d+', p, re.I) else p for p in positions]
-        consistent_position = len(set(q_nums)) == 1 if len(q_nums) > 1 else False
-        topic = c.get('topic', '').strip()
-        if not topic or len(topic) < 3: continue
-        questions = c.get('questions', [])[:max(len(valid_papers), 1)]
-        valid.append({
-            **c, 'frequency': freq, 'importance': importance,
-            'papers': valid_papers if valid_papers else c.get('papers', []),
-            'consistent_marks': consistent_marks, 'consistent_position': consistent_position,
-            'questions': questions,
-            'marks_each_time': marks if marks else c.get('marks_each_time', []),
-            'question_positions': positions
-        })
-    valid.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
-    return valid
-# ── FIX: POST-PROCESSING DEDUPLICATION ──
-def deduplicate_clusters(clusters):
-    """Remove same-paper duplicates and cross-cluster question duplicates"""
-    seen_question_ids = set()
+Paper: {paper_name}
+Text:
+{text[:5000]}
 
-    for cluster in clusters:
-        papers = cluster.get('papers', [])
-        positions = cluster.get('question_positions', [])
-        questions = cluster.get('questions', [])
-        marks = cluster.get('marks_each_time', [])
+Return ONLY a JSON array:
+[
+  {{"id":"{paper_name}_Q1a","paper":"{paper_name}","position":"Q1a","marks":5,"question":"exact question text"}},
+  {{"id":"{paper_name}_Q2A","paper":"{paper_name}","position":"Q2A","marks":10,"question":"exact question text"}}
+]
 
-        # Step 1: remove duplicate papers within this cluster
-        seen_papers = set()
-        clean_idx = []
-        for i, paper in enumerate(papers):
-            paper_key = paper.lower().replace('_','').replace('-','')
-            if paper_key not in seen_papers:
-                seen_papers.add(paper_key)
-                clean_idx.append(i)
+Rules:
+- Include ALL questions from Q1a through Q6B
+- Each question gets unique id: paper_position
+- marks: 5 for Q1 parts, 10 for Q2-Q6, 0 if unclear
+- Extract exact question text
+- Return ONLY the JSON array, no markdown"""
 
-        # Step 2: remove questions already used in another cluster
-        final_idx = []
-        for i in clean_idx:
-            pos = positions[i] if i < len(positions) else ''
-            paper = papers[i] if i < len(papers) else ''
-            qid = f"{paper}_{pos}".lower()
-            if qid not in seen_question_ids:
-                seen_question_ids.add(qid)
-                final_idx.append(i)
+    try:
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Extract exam questions as JSON array. No markdown."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,  # fully deterministic
+            max_tokens=2000
+        )
+        raw = resp.choices[0].message.content.strip()
+        raw = re.sub(r'^```(?:json)?\n?', '', raw)
+        raw = re.sub(r'\n?```$', '', raw).strip()
+        questions = json.loads(raw)
+        for q in questions:
+            q['paper'] = paper_name
+        return questions
+    except Exception:
+        return []
 
-        # Rebuild cluster with clean data
-        cluster['papers'] = [papers[i] for i in final_idx if i < len(papers)]
-        cluster['question_positions'] = [positions[i] for i in final_idx if i < len(positions)]
-        cluster['questions'] = [questions[i] for i in final_idx if i < len(questions)]
-        cluster['marks_each_time'] = [marks[i] for i in final_idx if i < len(marks)]
-        cluster['frequency'] = len(cluster['papers'])
-
-        # Recalculate importance
-        f = cluster['frequency']
-        if f >= 3: cluster['importance'] = 'HIGH'
-        elif f == 2: cluster['importance'] = 'MEDIUM'
-        else: cluster['importance'] = 'LOW'
-
-    # Remove empty clusters, sort by frequency
-    result = [c for c in clusters if c.get('frequency', 0) >= 1]
-    result.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
-    return result
-
-
-
-# ── PAPER NAME PARSER ──
-MONTH_MAP = {
-    'jan':('January',1),'feb':('February',2),'mar':('March',3),
-    'apr':('April',4),'may':('May',5),'jun':('June',6),
-    'jul':('July',7),'aug':('August',8),'sep':('September',9),
-    'oct':('October',10),'nov':('November',11),'dec':('December',12)
+# ── STEP 2: PYTHON TF-IDF CLUSTERING ──
+STOPWORDS = {
+    'a','an','the','and','or','but','in','on','at','to','for','of','with',
+    'is','are','was','were','be','been','have','has','had','do','does','did',
+    'will','would','could','should','may','might','can','what','how','why',
+    'when','where','which','who','that','this','it','from','by','as','if',
+    'explain','describe','define','discuss','write','short','note','answer',
+    'question','marks','following','given','using','use','give','find',
+    'state','list','show','prove','derive','calculate','determine','compare',
+    'with','example','suitable','neat','diagram','detail','brief'
 }
 
-def parse_paper_name(filename):
-    parts = filename.lower().replace('-','_').split('_')
-    year = next((int(p) for p in parts if re.match(r'20\d\d$', p)), None)
-    mk = next((p[:3] for p in parts if p[:3] in MONTH_MAP), None)
-    mn, mnum = MONTH_MAP.get(mk, ('',0))
-    sk = year*100+mnum if year else 0
-    if year and mn: disp = f"{mn}_{year}"
-    elif year: disp = f"Paper_{year}"
-    else: disp = f"Paper_{filename[:10]}"
-    return disp, sk
+def tokenize(text):
+    text = text.lower()
+    text = re.sub(r'[^a-z0-9\s]', ' ', text)
+    tokens = [t for t in text.split() if t not in STOPWORDS and len(t) > 2]
+    return tokens
 
-def safe_parse_json(text):
-    text = re.sub(r'^```(?:json)?\n?','',text.strip())
-    text = re.sub(r'\n?```$','',text).strip()
-    try: return json.loads(text)
-    except: pass
-    try:
-        m = re.search(r'"clusters"\s*:\s*\[', text)
-        if m:
-            s=m.end(); depth=1; i=s; lc=s
-            while i<len(text) and depth>0:
-                if text[i]=='{': depth+=1
-                elif text[i]=='}':
-                    depth-=1
-                    if depth==1: lc=i+1
-                i+=1
-            ct=text[s:lc].rstrip(',')
-            return json.loads(f'{{"clusters":[{ct}],"predictions":[],"study_plan":{{"strategy":"Focus on HIGH priority topics.","days":[],"golden_topics":[],"dont_skip":[]}},"paper_pattern":{{}}}}')
-    except: pass
-    raise json.JSONDecodeError("Cannot parse",text,0)
+def cosine_sim(v1, v2):
+    common = set(v1) & set(v2)
+    if not common: return 0.0
+    dot = sum(v1[k] * v2[k] for k in common)
+    m1 = math.sqrt(sum(x**2 for x in v1.values()))
+    m2 = math.sqrt(sum(x**2 for x in v2.values()))
+    if m1 == 0 or m2 == 0: return 0.0
+    return dot / (m1 * m2)
 
-# ── MAIN ANALYSIS — SINGLE GROQ CALL ──
-def analyze_with_groq(all_papers_text, user_name, university, subject):
-    client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
-    sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
+def build_tfidf(questions):
+    N = len(questions)
+    tokenized = [tokenize(q['question']) for q in questions]
+    df = Counter()
+    for tokens in tokenized:
+        for t in set(tokens):
+            df[t] += 1
+    idf = {t: math.log((N+1)/(df[t]+1))+1 for t in df}
+    vectors = []
+    for tokens in tokenized:
+        tf = Counter(tokens)
+        total = max(len(tokens), 1)
+        vec = {t: (tf[t]/total)*idf.get(t,1) for t in tf}
+        vectors.append(vec)
+    return vectors
 
-    uni_info = UNIVERSITY_DB.get(university, UNIVERSITY_DB['mumbai_be'])
+def match_topic(question_text, topic_keywords):
+    """Check if a question matches a known topic"""
+    q_lower = question_text.lower()
+    # Extract key words from topic
+    topic_words = tokenize(topic_keywords)
+    matches = sum(1 for w in topic_words if w in q_lower)
+    return matches >= max(1, len(topic_words) // 3)
+
+def cluster_questions_python(all_questions, subject, num_papers):
+    """Pure Python clustering — deterministic, no AI variance"""
     topic_list = SUBJECT_TOPICS.get(subject, SUBJECT_TOPICS['general'])
-    num_papers = len(sorted_papers)
 
-    # Dynamic chars per paper — keeps total tokens under limit
-    chars_per_paper = min(1200, max(600, 6000 // num_papers))
+    # Build TF-IDF vectors
+    if len(all_questions) < 2:
+        return []
 
-    papers_content = ""
-    for paper_name, (text, _) in sorted_papers:
-        if not text or len(text.strip()) < 50: continue
-        # Clean again right before sending
-        text = clean_pdf_text(text)
-        qs = extract_questions_only(text)
-        if len(qs.strip()) < 30: qs = text
-        papers_content += f"\n\n=== {paper_name} ===\n{qs[:chars_per_paper]}"
+    vectors = build_tfidf(all_questions)
 
-    if not papers_content.strip():
-        raise Exception("Could not extract questions from papers")
+    # Assign each question to best matching known topic first
+    topic_assignments = {}  # question_id -> topic
+    topic_clusters = defaultdict(list)  # topic -> list of questions
 
-    prompt = f"""You are an expert exam analyzer for {uni_info['name']} students.
-Student: {user_name} | Subject: {subject.upper()} | Papers: {num_papers}
+    for i, q in enumerate(all_questions):
+        best_topic = None
+        best_score = 0
+        for topic in topic_list:
+            # Check keyword match
+            if match_topic(q['question'], topic):
+                # Also check TF-IDF score against topic keywords
+                topic_vec = {}
+                for word in tokenize(topic):
+                    topic_vec[word] = 1.0
+                score = cosine_sim(vectors[i], topic_vec)
+                if score > best_score:
+                    best_score = score
+                    best_topic = topic
+        if best_topic and best_score > 0.05:
+            topic_assignments[q['id']] = best_topic
+            topic_clusters[best_topic].append(q)
 
-PAPER STRUCTURE: {uni_info['structure']}
+    # For questions not matched to known topic, use similarity clustering
+    unmatched = [q for q in all_questions if q['id'] not in topic_assignments]
+    if unmatched:
+        unmatched_vectors = [vectors[all_questions.index(q)] for q in unmatched if q in all_questions]
+        visited = [False] * len(unmatched)
+        for i in range(len(unmatched)):
+            if visited[i]: continue
+            cluster = [unmatched[i]]
+            visited[i] = True
+            for j in range(i+1, len(unmatched)):
+                if visited[j]: continue
+                if i < len(unmatched_vectors) and j < len(unmatched_vectors):
+                    sim = cosine_sim(unmatched_vectors[i], unmatched_vectors[j])
+                    if sim > 0.3 and unmatched[i]['paper'] != unmatched[j]['paper']:
+                        cluster.append(unmatched[j])
+                        visited[j] = True
+            if len(cluster) >= 2:
+                papers_in = list(set(q['paper'] for q in cluster))
+                if len(papers_in) >= 2:
+                    # Name the cluster from most common words
+                    all_words = tokenize(' '.join(q['question'] for q in cluster))
+                    freq = Counter(all_words)
+                    topic_name = ' '.join(w.title() for w, _ in freq.most_common(3))
+                    topic_clusters[topic_name].extend(cluster)
 
-ALL EXAM PAPERS — read every single question in every paper:
-{papers_content}
+    # Build final clusters — only keep cross-paper ones
+    final_clusters = []
+    for topic, questions in topic_clusters.items():
+        # Deduplicate: one question per paper
+        paper_best = {}
+        for q in questions:
+            paper = q['paper']
+            if paper not in paper_best:
+                paper_best[paper] = q
+            else:
+                # Keep the longer/more specific question
+                if len(q['question']) > len(paper_best[paper]['question']):
+                    paper_best[paper] = q
 
-FIND EACH OF THESE AS A SEPARATE CLUSTER — never merge two topics from this list:
-{chr(10).join(f"- {t}" for t in topic_list)}
+        unique_questions = list(paper_best.values())
+        papers = [q['paper'] for q in unique_questions]
 
-Even if a topic appears in only 1 paper, give it its own LOW cluster.
-Never group two different topics into one cluster.
+        if len(papers) < 2:
+            continue  # skip single-paper topics
 
-CRITICAL RULES:
-- One question can only belong to ONE cluster
-- Two questions from the SAME paper cannot be in the same cluster
-- A cluster = same topic appearing in DIFFERENT papers
-- Every paper listed above must appear in at least one cluster
+        freq = len(papers)
+        if freq >= 3: importance = 'HIGH'
+        elif freq == 2: importance = 'MEDIUM'
+        else: importance = 'LOW'
 
-Return ONLY valid JSON:
+        marks = [q.get('marks', 0) for q in unique_questions]
+        marks_nonzero = [m for m in marks if m > 0]
+        consistent_marks = len(set(marks_nonzero)) == 1 if len(marks_nonzero) > 1 else False
+
+        positions = [q.get('position', '') for q in unique_questions]
+        q_nums = [re.match(r'Q\d+', p, re.I).group() if re.match(r'Q\d+', p, re.I) else p for p in positions]
+        consistent_position = len(set(q_nums)) == 1 if len(q_nums) > 1 else False
+
+        final_clusters.append({
+            'topic': topic,
+            'frequency': freq,
+            'importance': importance,
+            'questions': [q['question'] for q in unique_questions],
+            'papers': papers,
+            'question_positions': positions,
+            'marks_each_time': marks_nonzero,
+            'consistent_position': consistent_position,
+            'consistent_marks': consistent_marks,
+            'pattern_note': '',
+            'tip': '',
+            'keywords': []
+        })
+
+    final_clusters.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
+    return final_clusters[:15]
+
+# ── STEP 3: GROQ ENRICHES CLUSTERS (tips, predictions, plan) ──
+def enrich_with_groq(clusters, user_name, university, subject, client):
+    """Groq job 2: add tips, predictions, study plan to pre-built clusters"""
+    uni_info = UNIVERSITY_DB.get(university, UNIVERSITY_DB['mumbai_be'])
+
+    cluster_summary = json.dumps([{
+        'topic': c['topic'],
+        'frequency': c['frequency'],
+        'importance': c['importance'],
+        'papers': c['papers'],
+        'sample_question': c['questions'][0][:150] if c['questions'] else ''
+    } for c in clusters], indent=2)[:5000]
+
+    prompt = f"""You are an exam tip generator for {uni_info['name']} {subject.upper()} students.
+Student: {user_name}
+
+Here are the repeat topics already identified (DO NOT change topics or frequencies):
+{cluster_summary}
+
+For each cluster, add:
+1. A practical exam tip
+2. Pattern note about when/where it appears
+
+Then generate:
+- 10 predicted questions for next exam
+- 7-day study plan
+
+Return ONLY this JSON:
 {{
-  "clusters": [
-    {{
-      "topic": "exact topic name",
-      "frequency": 3,
-      "importance": "HIGH",
-      "questions": ["Q text paper1", "Q text paper2", "Q text paper3"],
-      "papers": ["Nov_2023","May_2023","Dec_2024"],
-      "question_positions": ["Q2A","Q3B","Q2A"],
-      "marks_each_time": [10,10,10],
-      "consistent_position": false,
-      "consistent_marks": true,
-      "pattern_note": "Always 10 marks, appears in Q2 or Q3",
-      "tip": "actionable exam tip",
-      "keywords": ["keyword1","keyword2"]
-    }}
-  ],
+  "tips": {{
+    "topic_name": {{"tip": "exam tip", "pattern_note": "pattern observation"}}
+  }},
   "predictions": [
-    {{
-      "question": "predicted question text",
-      "topic": "topic name",
-      "confidence": "HIGH",
-      "reason": "why likely",
-      "likely_position": "Q2A",
-      "likely_marks": 10,
-      "frequency": 3
-    }}
+    {{"question": "predicted Q text", "topic": "topic", "confidence": "HIGH", "reason": "why", "likely_position": "Q2A", "likely_marks": 10, "frequency": 3}}
   ],
   "paper_pattern": {{
     "compulsory_question": "{uni_info['pattern']}",
     "optional_questions": "Q2-Q6 attempt any 3, Part A and B 10 marks each",
     "total_marks": {uni_info['total_marks']},
     "duration": "{uni_info['duration']}",
-    "key_insight": "key pattern insight for this subject"
+    "key_insight": "key insight for {subject.upper()}"
   }},
   "study_plan": {{
     "strategy": "2-3 sentence strategy for {user_name}",
@@ -411,49 +458,64 @@ Return ONLY valid JSON:
       {{"day":4,"focus":"topic","priority":"MEDIUM","hours":2,"tasks":["task1","task2","task3"]}},
       {{"day":5,"focus":"topic","priority":"MEDIUM","hours":2,"tasks":["task1","task2","task3"]}},
       {{"day":6,"focus":"topic","priority":"LOW","hours":2,"tasks":["task1","task2"]}},
-      {{"day":7,"focus":"Full Revision + Mock Test","priority":"HIGH","hours":4,"tasks":["Revise all HIGH topics","Timed mock test","Review weak areas","Quick reference sheet"]}}
+      {{"day":7,"focus":"Full Revision + Mock Test","priority":"HIGH","hours":4,"tasks":["Revise all HIGH topics","Timed mock","Review weak areas","Quick reference sheet"]}}
     ],
     "golden_topics": ["topic1","topic2","topic3"],
     "dont_skip": ["topic1","topic2"]
   }}
 }}
 
-STRICT RULES:
-- clusters 10-15 sorted by frequency descending
-- HIGH=3+ papers, MEDIUM=2 papers, LOW=1 paper
-- ONE topic per cluster — NEVER merge different topics
-- EACH PAPER NAME can appear MAXIMUM ONCE per cluster
-- If 2 questions from the SAME paper cover the same topic, include only the most specific one
-- Two questions from the same paper = NOT a cross-paper repeat
-- Find EACH topic from the known topics list as its own SEPARATE cluster
-- Do NOT group different topics together even if vaguely related
-- predictions exactly 10, days exactly 7
-Return ONLY JSON."""
+predictions: exactly 10. days: exactly 7. Return ONLY JSON."""
 
-    for attempt in range(3):
-        try:
-            resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role":"system","content":"Expert exam analyzer. Return valid JSON only. No markdown."},
-                    {"role":"user","content":prompt}
-                ],
-                temperature=0.1,
-                max_tokens=4000
-            )
-            return safe_parse_json(resp.choices[0].message.content.strip())
-        except json.JSONDecodeError:
-            if attempt == 2: raise
-            time.sleep(2)
-        except Exception as e:
-            err = str(e).lower()
-            if 'rate' in err or '429' in err:
-                wait = 15 if attempt == 0 else 30
-                if attempt < 2:
-                    time.sleep(wait)
-                    continue
-                raise Exception(f'AI is busy. Please wait 30 seconds and click Analyze again.')
-            raise e
+    try:
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Exam tip generator. Return valid JSON only. No markdown."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=3000
+        )
+        raw = resp.choices[0].message.content.strip()
+        raw = re.sub(r'^```(?:json)?\n?', '', raw)
+        raw = re.sub(r'\n?```$', '', raw).strip()
+        enrichment = json.loads(raw)
+
+        # Apply tips to clusters
+        tips_map = enrichment.get('tips', {})
+        for c in clusters:
+            topic = c['topic']
+            if topic in tips_map:
+                c['tip'] = tips_map[topic].get('tip', '')
+                c['pattern_note'] = tips_map[topic].get('pattern_note', '')
+            elif not c.get('tip'):
+                c['tip'] = f"Review all past questions on {topic} — appears consistently across papers."
+
+        return enrichment
+    except Exception:
+        return {
+            'predictions': [],
+            'paper_pattern': {},
+            'study_plan': {'strategy': f'Focus on HIGH priority topics for {subject.upper()}.', 'days': [], 'golden_topics': [], 'dont_skip': []}
+        }
+
+def parse_paper_name(filename):
+    MONTH_MAP = {
+        'jan':('January',1),'feb':('February',2),'mar':('March',3),
+        'apr':('April',4),'may':('May',5),'jun':('June',6),
+        'jul':('July',7),'aug':('August',8),'sep':('September',9),
+        'oct':('October',10),'nov':('November',11),'dec':('December',12)
+    }
+    parts = filename.lower().replace('-','_').split('_')
+    year = next((int(p) for p in parts if re.match(r'20\d\d$', p)), None)
+    mk = next((p[:3] for p in parts if p[:3] in MONTH_MAP), None)
+    mn, mnum = MONTH_MAP.get(mk, ('',0))
+    sk = year*100+mnum if year else 0
+    if year and mn: disp = f"{mn}_{year}"
+    elif year: disp = f"Paper_{year}"
+    else: disp = f"Paper_{filename[:10]}"
+    return disp, sk
 
 
 @app.route('/')
@@ -510,6 +572,7 @@ def analyze():
     ocr_used = []
 
     try:
+        # Step 1: Extract text from all PDFs
         for file in files:
             if not (file and file.filename.lower().endswith('.pdf')): continue
             filename = secure_filename(file.filename)
@@ -528,31 +591,44 @@ def analyze():
                         text = vt
                         ocr_used.append(paper_name)
                     elif not text or len(text.strip()) < 50:
-                        _analysis_lock.release()
                         return jsonify({'error': f'Cannot read "{filename}". Convert at smallpdf.com → OCR PDF → re-upload.'}), 400
                 all_papers_text[paper_name] = (text, sort_key)
                 with pdfplumber.open(filepath) as pdf:
                     paper_stats[paper_name] = {'pages': len(pdf.pages), 'chars': len(text), 'ocr': paper_name in ocr_used}
             except Exception as e:
-                _analysis_lock.release()
                 return jsonify({'error': f'Failed: "{filename}": {str(e)}'}), 500
             finally:
                 if os.path.exists(filepath): os.remove(filepath)
                 gc.collect()
 
         if len(all_papers_text) < 2:
-            _analysis_lock.release()
             return jsonify({'error': 'Need at least 2 readable papers.'}), 400
 
-        result = analyze_with_groq(all_papers_text, user_name, university, subject)
-        clusters = validate_clusters(result.get('clusters', []), all_papers_text)
-        clusters = deduplicate_clusters(clusters)  # remove same-paper duplicates
-        predictions = result.get('predictions', [])
-        study_plan = result.get('study_plan', {})
-        paper_pattern = result.get('paper_pattern', {})
+        # Step 2: Extract structured questions from each paper (1 Groq call per paper)
+        all_questions = []
+        sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
+        for paper_name, (text, _) in sorted_papers:
+            questions = extract_questions_as_json(paper_name, clean_pdf_text(text), client)
+            if questions:
+                all_questions.extend(questions)
+            else:
+                # Fallback: basic regex extraction
+                lines = clean_pdf_text(text).split('\n')
+                for line in lines:
+                    if re.search(r'Q\d+|explain|describe|define', line, re.I) and len(line) > 20:
+                        all_questions.append({'id': f"{paper_name}_{len(all_questions)}", 'paper': paper_name, 'position': '', 'marks': 0, 'question': line[:300]})
+            time.sleep(1)  # rate limit safety
+            gc.collect()
 
-    except json.JSONDecodeError:
-        return jsonify({'error': 'Analysis failed. Please try again.'}), 500
+        # Step 3: Python clustering — deterministic, no AI variance
+        clusters = cluster_questions_python(all_questions, subject, len(all_papers_text))
+
+        # Step 4: Enrich with tips, predictions, study plan (1 Groq call)
+        enrichment = enrich_with_groq(clusters, user_name, university, subject, client)
+        predictions = enrichment.get('predictions', [])
+        study_plan = enrichment.get('study_plan', {})
+        paper_pattern = enrichment.get('paper_pattern', {})
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -567,7 +643,7 @@ def analyze():
         'subject': subject.upper(),
         'stats': {
             'papers': len(all_papers_text),
-            'total_questions': sum(s.get('chars',0)//80 for s in paper_stats.values()),
+            'total_questions': len(all_questions),
             'clusters': len(clusters),
             'high_priority': len([c for c in clusters if c.get('importance')=='HIGH']),
             'paper_stats': paper_stats
@@ -597,6 +673,7 @@ def export_results():
         f"Subject    : {subject}",
         f"Date       : {datetime.now().strftime('%d %b %Y %I:%M %p')}",
         f"Papers     : {stats.get('papers',0)}",
+        f"Questions  : {stats.get('total_questions',0)}",
         f"Clusters   : {stats.get('clusters',0)}",
         f"HIGH       : {stats.get('high_priority',0)}",
     ]
