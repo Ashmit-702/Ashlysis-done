@@ -712,21 +712,6 @@ def analyze():
             try:
                 text = extract_text_from_pdf(filepath)
 
-                SUBJECT_SIGNALS = {
-                    'mc': ['mobile','gsm','gprs','handover','bluetooth','cellular','wireless'],
-                    'os': ['process','scheduling','deadlock','semaphore','paging','memory management'],
-                    'spcc': ['assembler','compiler','macro','parser','loader','lexical'],
-                    'dbms': ['normalization','sql','transaction','relational','query'],
-                    'ai': ['search','heuristic','minimax','planning','inference','knowledge'],
-                    'ml': ['regression','classification','clustering','neural','learning rate'],
-                }
-                signals = SUBJECT_SIGNALS.get(subject, [])
-                if signals and len(text) > 200:
-                    text_lower = text.lower()
-                    matches = sum(1 for s in signals if s in text_lower)
-                    if matches < 2:
-                        ocr_used.append(f"⚠ {paper_name} may be wrong subject")
-                        continue
                 if is_scanned_pdf(text):
                     vt = extract_text_via_vision(filepath, client)
                     if vt and len(vt.strip()) > 50:
