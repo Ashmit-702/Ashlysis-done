@@ -754,6 +754,27 @@ def analyze():
         study_plan = enrichment.get('study_plan', {})
         paper_pattern = enrichment.get('paper_pattern', {})
 
+        enrichment = enrich_with_groq(clusters, user_name, univ)
+predictions = enrichment.get('predictions', [])
+study_plan = enrichment.get('study_plan', {})
+paper_pattern = enrichment.get('paper_pattern', {})
+
+# --- Fallback if predictions missing or <10 ---
+if not predictions or len(predictions) < 10:
+    predictions = []
+    for c in clusters[:10]:
+        predictions.append({
+            "question": f"Explain {c['topic']}",
+            "topic": c['topic'],
+            "confidence": "MEDIUM",
+            "reason": "Fallback from repeated topic",
+            "likely_position": "Q2A",
+            "likely_marks": 10,
+            "frequency": c['frequency']
+        })
+    enrichment['predictions'] = predictions
+
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
