@@ -683,22 +683,76 @@ def export_results():
             f"Q2-Q6 : {paper_pattern.get('optional_questions','')}",
             f"Marks : {paper_pattern.get('total_marks',80)} | {paper_pattern.get('duration','3 hours')}",
             f"Tip   : {paper_pattern.get('key_insight','')}"]
-    lines += ["","━"*52,"REPEATING QUESTIONS","━"*52]
-    for i,c in enumerate(clusters,1):
-        pos=c.get('question_positions',[]); marks=c.get('marks_each_time',[])
-        lines += [
-            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
-            f"   Papers : {', '.join(c.get('papers',[]))}",
-            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
-            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
-            f"   Pattern: {c.get('pattern_note','')}",
-            f"   Tip    : {c.get('tip','')}",
-        ]
-        for q in c.get('questions',[])[:4]: lines.append(f"   • {q[:200]}")
-    lines += ["","━"*52,"PREDICTED QUESTIONS","━"*52]
-    for i,p in enumerate(predictions,1):
-        lines += [f"\n{i}. [{p.get('confidence')}] {p.get('question','')[:200]}",
-                  f"   Pos: {p.get('likely_position','?')} | Marks: {p.get('likely_marks','?')} | {p.get('reason','')}"]
+            
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# MOST REPEATED QUESTIONS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+lines += ["","━"*52,"MOST REPEATED QUESTIONS","━"*52]
+
+for i, c in enumerate(clusters, 1):
+
+    lines += [
+        f"\n{i}. {c.get('topic')} ({c.get('frequency')}x)"
+    ]
+
+    for qi, q in enumerate(c.get('questions', [])[:4], 1):
+        lines.append(f"   {qi}. {q[:220]}")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PATTERN ANALYSIS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+lines += ["","━"*52,"PATTERN ANALYSIS","━"*52]
+
+for i, c in enumerate(clusters, 1):
+
+    pos = c.get('question_positions', [])
+    marks = c.get('marks_each_time', [])
+
+    lines += [
+        f"\n{i}. {c.get('topic')}",
+        f"   Importance : {c.get('importance')}",
+        f"   Frequency  : {c.get('frequency')}x",
+        f"   Papers     : {', '.join(c.get('papers', []))}",
+        f"   Positions  : {', '.join(str(p) for p in pos)}",
+        f"   Marks      : {', '.join(str(m) for m in marks)}",
+    ]
+
+    if c.get('consistent_position'):
+        lines.append("   Position Pattern : Consistent")
+
+    if c.get('consistent_marks'):
+        lines.append("   Marks Pattern    : Consistent")
+
+    if c.get('pattern_note'):
+        lines.append(f"   Pattern Insight  : {c.get('pattern_note')}")
+
+    if c.get('tip'):
+        lines.append(f"   Study Tip        : {c.get('tip')}")
+    lines += [
+    "",
+    "━"*52,
+    "PREDICTED QUESTIONS",
+    "━"*52,
+    "",
+    "NOTE:",
+    "Predictions are based on repetition frequency,",
+    "question positions, marks consistency, and pattern analysis."
+]
+
+for i, p in enumerate(predictions, 1):
+
+    lines += [
+        f"\n{i}. {p.get('question','')[:220]}",
+        f"   Confidence : {p.get('confidence')}",
+        f"   Position   : {p.get('likely_position','?')}",
+        f"   Marks      : {p.get('likely_marks','?')}",
+        f"   Topic      : {p.get('topic','Unknown')}",
+        f"   Frequency  : {p.get('frequency','?')}x",
+        f"   Reason     : {p.get('reason','')}"
+    ]
+
     lines += ["","━"*52,"7-DAY STUDY PLAN","━"*52]
     if study_plan:
         lines += [f"\nStrategy: {study_plan.get('strategy','')}",
