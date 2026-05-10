@@ -303,23 +303,19 @@ def cluster_questions_python(all_questions, subject, num_papers):
     """Pure Python clustering — deterministic, no AI variance"""
     topic_list = SUBJECT_TOPICS.get(subject, SUBJECT_TOPICS['general'])
 
-    # Build TF-IDF vectors
     if len(all_questions) < 2:
         return []
 
     vectors = build_tfidf(all_questions)
 
-    # Assign each question to best matching known topic first
-    topic_assignments = {}  # question_id -> topic
-    topic_clusters = defaultdict(list)  # topic -> list of questions
+    topic_assignments = {}
+    topic_clusters = defaultdict(list)
 
     for i, q in enumerate(all_questions):
         best_topic = None
         best_score = 0
         for topic in topic_list:
-            # Check keyword match
             if match_topic(q['question'], topic):
-                # Also check TF-IDF score against topic keywords
                 topic_vec = {}
                 for word in tokenize(topic):
                     topic_vec[word] = 1.0
@@ -331,7 +327,6 @@ def cluster_questions_python(all_questions, subject, num_papers):
             topic_assignments[q['id']] = best_topic
             topic_clusters[best_topic].append(q)
 
-    # For questions not matched to known topic, use similarity clustering
     unmatched = [q for q in all_questions if q['id'] not in topic_assignments]
     if unmatched:
         unmatched_vectors = [vectors[all_questions.index(q)] for q in unmatched if q in all_questions]
@@ -350,23 +345,19 @@ def cluster_questions_python(all_questions, subject, num_papers):
             if len(cluster) >= 2:
                 papers_in = list(set(q['paper'] for q in cluster))
                 if len(papers_in) >= 2:
-                    # Name the cluster from most common words
                     all_words = tokenize(' '.join(q['question'] for q in cluster))
                     freq = Counter(all_words)
                     topic_name = ' '.join(w.title() for w, _ in freq.most_common(3))
                     topic_clusters[topic_name].extend(cluster)
 
-    # Build final clusters — only keep cross-paper ones
     final_clusters = []
     for topic, questions in topic_clusters.items():
-        # Deduplicate: one question per paper
         paper_best = {}
         for q in questions:
             paper = q['paper']
             if paper not in paper_best:
                 paper_best[paper] = q
             else:
-                # Keep the longer/more specific question
                 if len(q['question']) > len(paper_best[paper]['question']):
                     paper_best[paper] = q
 
@@ -374,7 +365,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
         papers = [q['paper'] for q in unique_questions]
 
         if len(papers) < 2:
-            continue  # skip single-paper topics
+            continue
 
         freq = len(papers)
         if freq >= 3: importance = 'HIGH'
@@ -482,7 +473,6 @@ predictions: exactly 10. days: exactly 7. Return ONLY JSON."""
         raw = re.sub(r'\n?```$', '', raw).strip()
         enrichment = json.loads(raw)
 
-        # Apply tips to clusters
         tips_map = enrichment.get('tips', {})
         for c in clusters:
             topic = c['topic']
@@ -651,63 +641,117 @@ def analyze():
     })
 
 
+# ── EXPORT — new structured format ──
 @app.route('/export', methods=['POST'])
 def export_results():
     data = request.json
-    clusters = data.get('clusters',[])
-    predictions = data.get('predictions',[])
-    study_plan = data.get('study_plan',{})
-    paper_pattern = data.get('paper_pattern',{})
-    stats = data.get('stats',{})
-    user_name = data.get('user_name','Student')
-    university = data.get('university','')
-    subject = data.get('subject','')
-    today = datetime.now().strftime('%Y%m%d')
+    clusters     = data.get('clusters', [])
+    predictions  = data.get('predictions', [])
+    study_plan   = data.get('study_plan', {})
+    paper_pattern= data.get('paper_pattern', {})
+    stats        = data.get('stats', {})
+    user_name    = data.get('user_name', 'Student')
+    university   = data.get('university', '')
+    subject      = data.get('subject', '')
+    today        = datetime.now().strftime('%Y%m%d')
+
+    D  = "━" * 52
+    D2 = "─" * 52
+
+    def section(title):
+        return ["", D, title, D]
 
     lines = [
         "╔══════════════════════════════════════════════════╗",
         "║           ASHLYSIS — EXAM INTELLIGENCE           ║",
-        "╚══════════════════════════════════════════════════╝","",
+        "╚══════════════════════════════════════════════════╝",
+        "",
         f"Student    : {user_name}",
         f"University : {university}",
         f"Subject    : {subject}",
         f"Date       : {datetime.now().strftime('%d %b %Y %I:%M %p')}",
-        f"Papers     : {stats.get('papers',0)}",
-        f"Questions  : {stats.get('total_questions',0)}",
-        f"Clusters   : {stats.get('clusters',0)}",
-        f"HIGH       : {stats.get('high_priority',0)}",
+        f"Papers     : {stats.get('papers', 0)}",
+        f"Questions  : {stats.get('total_questions', 0)}",
+        f"Clusters   : {stats.get('clusters', 0)}",
+        f"HIGH       : {stats.get('high_priority', 0)}",
+        f"Predictions: {len(predictions)}",
     ]
+
+    # ── SECTION 1: SUMMARY ──
     if paper_pattern:
-        lines += ["","━"*52,"PAPER PATTERN","━"*52,
-            f"Q1    : {paper_pattern.get('compulsory_question','')}",
-            f"Q2-Q6 : {paper_pattern.get('optional_questions','')}",
-            f"Marks : {paper_pattern.get('total_marks',80)} | {paper_pattern.get('duration','3 hours')}",
-            f"Tip   : {paper_pattern.get('key_insight','')}"]
-    lines += ["","━"*52,"REPEATING QUESTIONS","━"*52]
-    for i,c in enumerate(clusters,1):
-        pos=c.get('question_positions',[]); marks=c.get('marks_each_time',[])
+        lines += section("PAPER PATTERN")
         lines += [
-            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
-            f"   Papers : {', '.join(c.get('papers',[]))}",
-            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
-            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
-            f"   Pattern: {c.get('pattern_note','')}",
-            f"   Tip    : {c.get('tip','')}",
+            f"Q1    : {paper_pattern.get('compulsory_question', '')}",
+            f"Q2-Q6 : {paper_pattern.get('optional_questions', '')}",
+            f"Marks : {paper_pattern.get('total_marks', 80)} | {paper_pattern.get('duration', '3 hours')}",
+            f"Tip   : {paper_pattern.get('key_insight', '')}",
         ]
-        for q in c.get('questions',[])[:4]: lines.append(f"   • {q[:200]}")
-    lines += ["","━"*52,"PREDICTED QUESTIONS","━"*52]
-    for i,p in enumerate(predictions,1):
-        lines += [f"\n{i}. [{p.get('confidence')}] {p.get('question','')[:200]}",
-                  f"   Pos: {p.get('likely_position','?')} | Marks: {p.get('likely_marks','?')} | {p.get('reason','')}"]
-    lines += ["","━"*52,"7-DAY STUDY PLAN","━"*52]
+
+    # ── SECTION 2: MOST REPEATED QUESTIONS (clean numbered list, AI-ready) ──
+    lines += section("MOST REPEATED QUESTIONS")
+    lines += [
+        "Paste this block into ChatGPT or Claude to get full answers:",
+        "",
+        f"I am a {university} student studying {subject}.",
+        "Please answer the following frequently-repeated exam questions:",
+        "",
+    ]
+    q_num = 1
+    for c in clusters:
+        best_q     = c.get('questions', [''])[0]
+        marks_list = c.get('marks_each_time', [])
+        pos_list   = c.get('question_positions', [])
+        m_str = f"[{marks_list[0]}m]" if marks_list else ""
+        p_str = f"[{pos_list[0]}]"    if pos_list   else ""
+        lines.append(f"{q_num}. {best_q.strip()} {m_str} {p_str}".rstrip())
+        q_num += 1
+    lines += ["", f"({q_num - 1} repeated questions from {stats.get('papers', 0)} papers)"]
+
+    # ── SECTION 3: PATTERN ANALYSIS ──
+    lines += section("PATTERN ANALYSIS")
+    for i, c in enumerate(clusters, 1):
+        pos     = c.get('question_positions', [])
+        marks   = c.get('marks_each_time', [])
+        con_pos = "  ✓ ALWAYS SAME" if c.get('consistent_position') else ""
+        con_mrk = "  ✓ ALWAYS SAME" if c.get('consistent_marks') else ""
+        lines += [
+            "",
+            f"{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
+            f"   Papers  : {', '.join(c.get('papers', []))}",
+            f"   Pos     : {', '.join(str(p) for p in pos)}{con_pos}",
+            f"   Marks   : {', '.join(str(m) for m in marks)}{con_mrk}",
+            f"   Pattern : {c.get('pattern_note', '')}",
+            f"   Tip     : {c.get('tip', '')}",
+        ]
+        for q in c.get('questions', [])[:4]:
+            lines.append(f"   • {q[:200]}")
+
+    # ── SECTION 4: PREDICTED QUESTIONS ──
+    lines += section("PREDICTED QUESTIONS FOR NEXT EXAM")
+    lines += ["Based on repeat patterns — high probability questions", ""]
+    for i, p in enumerate(predictions, 1):
+        lines += [
+            f"{i}. [{p.get('confidence')}] {p.get('question', '')[:200]}",
+            f"   Pos: {p.get('likely_position', '?')} | Marks: {p.get('likely_marks', '?')}m | Seen: {p.get('frequency', '?')}×",
+            f"   Why: {p.get('reason', '')}",
+            "",
+        ]
+
+    # ── SECTION 5: 7-DAY STUDY PLAN ──
+    lines += section("7-DAY STUDY PLAN")
     if study_plan:
-        lines += [f"\nStrategy: {study_plan.get('strategy','')}",
-                  f"Golden: {', '.join(study_plan.get('golden_topics',[]))}",
-                  f"Never skip: {', '.join(study_plan.get('dont_skip',[]))}"]
-        for day in study_plan.get('days',[]):
-            lines += [f"\nDay {day['day']} [{day['priority']}] — {day['focus']} ({day['hours']}hrs)"]
-            for t in day.get('tasks',[]): lines.append(f"  ✓ {t}")
-    lines += ["","━"*52,f"ASHLYSIS — generated for {user_name}","━"*52]
+        lines += [
+            f"Strategy      : {study_plan.get('strategy', '')}",
+            f"Golden Topics : {', '.join(study_plan.get('golden_topics', []))}",
+            f"Never Skip    : {', '.join(study_plan.get('dont_skip', []))}",
+        ]
+        for day in study_plan.get('days', []):
+            lines += ["", f"Day {day['day']} [{day['priority']}] — {day['focus']} ({day['hours']}hrs)"]
+            for t in day.get('tasks', []):
+                lines.append(f"  ✓ {t}")
+
+    lines += ["", D, f"ASHLYSIS — generated for {user_name} · {subject}", D]
+
     buf = io.BytesIO("\n".join(lines).encode('utf-8'))
     buf.seek(0)
     return send_file(buf, mimetype='text/plain', as_attachment=True,
@@ -715,4 +759,4 @@ def export_results():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT',5000)), debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
