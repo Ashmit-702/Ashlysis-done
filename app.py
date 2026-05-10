@@ -292,12 +292,12 @@ def build_tfidf(questions):
     return vectors
 
 def match_topic(question_text, topic_keywords):
-    """Check if a question matches a known topic"""
     q_lower = question_text.lower()
-    # Extract key words from topic
     topic_words = tokenize(topic_keywords)
+    if not topic_words: return False
     matches = sum(1 for w in topic_words if w in q_lower)
-    return matches >= max(1, len(topic_words) // 3)
+    threshold = max(2, math.ceil(len(topic_words) * 0.4))
+    return matches >= threshold
 
 def cluster_questions_python(all_questions, subject, num_papers):
     """Pure Python clustering — deterministic, no AI variance"""
@@ -327,7 +327,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
                 if score > best_score:
                     best_score = score
                     best_topic = topic
-        if best_topic and best_score > 0.05:
+        if best_topic and best_score > 0.12:
             topic_assignments[q['id']] = best_topic
             topic_clusters[best_topic].append(q)
 
@@ -344,7 +344,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
                 if visited[j]: continue
                 if i < len(unmatched_vectors) and j < len(unmatched_vectors):
                     sim = cosine_sim(unmatched_vectors[i], unmatched_vectors[j])
-                    if sim > 0.3 and unmatched[i]['paper'] != unmatched[j]['paper']:
+                    if sim > 0.4 and unmatched[i]['paper'] != unmatched[j]['paper']:
                         cluster.append(unmatched[j])
                         visited[j] = True
             if len(cluster) >= 2:
