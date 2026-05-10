@@ -111,32 +111,6 @@ SUBJECT_TOPICS = {
         "Heap priority queue",
         "Divide and conquer"
     ],
-    "ai": [
-        "Uninformed search BFS DFS Iterative Deepening",
-        "Informed search A* Best First Heuristic",
-        "Hill Climbing Simulated Annealing local search",
-        "Minimax Alpha Beta Pruning game tree",
-        "Constraint Satisfaction Problem CSP backtracking",
-        "Propositional Logic First Order Logic resolution",
-        "Bayesian Network probabilistic reasoning",
-        "Machine Learning supervised unsupervised",
-        "Neural Network perceptron backpropagation",
-        "Natural Language Processing",
-        "Planning STRIPS state space",
-        "Knowledge Representation frames semantic net"
-    ],
-    "ml": [
-        "Linear Regression Logistic Regression",
-        "Decision Tree Random Forest",
-        "Support Vector Machine SVM kernel",
-        "K-Means clustering unsupervised",
-        "Neural Network deep learning CNN RNN",
-        "Overfitting underfitting regularization",
-        "Cross validation train test split",
-        "Naive Bayes classifier",
-        "Principal Component Analysis PCA",
-        "Reinforcement Learning Q-learning"
-    ],
     "general": ["Check every Q1-Q6 question in all papers for repeating topics"]
 }
 
@@ -317,28 +291,13 @@ def build_tfidf(questions):
         vectors.append(vec)
     return vectors
 
-# Topics that should NOT match certain questions
-TOPIC_NEGATIVE_KEYWORDS = {
-    "Snooping TCP Mobile TCP": ["small cells", "heterogeneous", "femtocell", "picocell"],
-    "Mobile IP agent discovery registration tunnelling": ["voip", "voice over", "ims"],
-    "GPRS Architecture SGSN GGSN": ["handover", "hand off", "roaming process"],
-}
-
 def match_topic(question_text, topic_keywords):
-    """Check if a question matches a known topic — requires specific keyword match"""
+    """Check if a question matches a known topic"""
     q_lower = question_text.lower()
-
-    # Check negative keywords first — reject if found
-    for topic_key, neg_words in TOPIC_NEGATIVE_KEYWORDS.items():
-        if topic_key.lower() in topic_keywords.lower():
-            if any(neg in q_lower for neg in neg_words):
-                return False
-
+    # Extract key words from topic
     topic_words = tokenize(topic_keywords)
-    if not topic_words: return False
     matches = sum(1 for w in topic_words if w in q_lower)
-    threshold = max(2, math.ceil(len(topic_words) * 0.4))
-    return matches >= threshold
+    return matches >= max(1, len(topic_words) // 3)
 
 def cluster_questions_python(all_questions, subject, num_papers):
     """Pure Python clustering — deterministic, no AI variance"""
@@ -368,7 +327,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
                 if score > best_score:
                     best_score = score
                     best_topic = topic
-        if best_topic and best_score > 0.12:  # tighter threshold
+        if best_topic and best_score > 0.05:
             topic_assignments[q['id']] = best_topic
             topic_clusters[best_topic].append(q)
 
@@ -385,7 +344,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
                 if visited[j]: continue
                 if i < len(unmatched_vectors) and j < len(unmatched_vectors):
                     sim = cosine_sim(unmatched_vectors[i], unmatched_vectors[j])
-                    if sim > 0.4 and unmatched[i]['paper'] != unmatched[j]['paper']:  # tighter
+                    if sim > 0.3 and unmatched[i]['paper'] != unmatched[j]['paper']:
                         cluster.append(unmatched[j])
                         visited[j] = True
             if len(cluster) >= 2:
@@ -446,40 +405,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
         })
 
     final_clusters.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
-
-    # Global deduplication — same question ID can only appear in ONE cluster
-    seen_qids = set()
-    deduped = []
-    for cluster in final_clusters:
-        papers = cluster.get('papers', [])
-        positions = cluster.get('question_positions', [])
-        questions = cluster.get('questions', [])
-        marks = cluster.get('marks_each_time', [])
-
-        clean_idx = []
-        for i, paper in enumerate(papers):
-            qid = f"{paper}_{positions[i] if i < len(positions) else i}".lower()
-            if qid not in seen_qids:
-                seen_qids.add(qid)
-                clean_idx.append(i)
-
-        cluster['papers'] = [papers[i] for i in clean_idx if i < len(papers)]
-        cluster['question_positions'] = [positions[i] for i in clean_idx if i < len(positions)]
-        cluster['questions'] = [questions[i] for i in clean_idx if i < len(questions)]
-        cluster['marks_each_time'] = [marks[i] for i in clean_idx if i < len(marks)]
-        cluster['frequency'] = len(cluster['papers'])
-
-        if cluster['frequency'] < 2:
-            continue  # drop single-paper clusters after dedup
-
-        f = cluster['frequency']
-        if f >= 3: cluster['importance'] = 'HIGH'
-        elif f == 2: cluster['importance'] = 'MEDIUM'
-        else: cluster['importance'] = 'LOW'
-
-        deduped.append(cluster)
-
-    return deduped[:15]
+    return final_clusters[:15]
 
 # ── STEP 3: GROQ ENRICHES CLUSTERS (tips, predictions, plan) ──
 def enrich_with_groq(clusters, user_name, university, subject, client):
@@ -608,8 +534,6 @@ def get_universities():
                 {'id': 'cn', 'name': 'Computer Networks'},
                 {'id': 'mc', 'name': 'Mobile Computing'},
                 {'id': 'dsa', 'name': 'Data Structures & Algorithms'},
-                {'id': 'ai', 'name': 'Artificial Intelligence'},
-                {'id': 'ml', 'name': 'Machine Learning'},
                 {'id': 'general', 'name': 'Other Subject'}
             ]
         }
@@ -661,24 +585,6 @@ def analyze():
             file.save(filepath)
             try:
                 text = extract_text_from_pdf(filepath)
-
-                # Subject mismatch detection
-                SUBJECT_SIGNALS = {
-                    'mc': ['mobile','gsm','gprs','handover','bluetooth','cellular','wireless'],
-                    'os': ['process','scheduling','deadlock','semaphore','paging','memory management'],
-                    'spcc': ['assembler','compiler','macro','parser','loader','lexical'],
-                    'dbms': ['normalization','sql','transaction','relational','query'],
-                    'ai': ['search','heuristic','minimax','planning','inference','knowledge'],
-                    'ml': ['regression','classification','clustering','neural','learning rate'],
-                }
-                signals = SUBJECT_SIGNALS.get(subject, [])
-                if signals and len(text) > 200:
-                    text_lower = text.lower()
-                    matches = sum(1 for s in signals if s in text_lower)
-                    if matches < 2:
-                        # Likely wrong subject — skip with warning
-                        ocr_used.append(f"⚠ {paper_name} may be wrong subject")
-                        continue
                 if is_scanned_pdf(text):
                     vt = extract_text_via_vision(filepath, client)
                     if vt and len(vt.strip()) > 50:
@@ -717,63 +623,11 @@ def analyze():
         # Step 3: Python clustering — deterministic, no AI variance
         clusters = cluster_questions_python(all_questions, subject, len(all_papers_text))
 
-        # Step 3b: Seed missing known topics (even if only 1 paper found)
-        topic_list = SUBJECT_TOPICS.get(subject, SUBJECT_TOPICS['general'])
-        existing_topics = {c['topic'] for c in clusters}
-        for topic in topic_list:
-            # Check if this topic was found in ANY paper
-            found_questions = []
-            for q in all_questions:
-                if match_topic(q['question'], topic):
-                    found_questions.append(q)
-            if found_questions and topic not in existing_topics:
-                # Add as LOW cluster — topic found but only in 1 paper
-                papers = list({q['paper'] for q in found_questions})
-                if len(papers) >= 1:
-                    clusters.append({
-                        'topic': topic,
-                        'frequency': len(papers),
-                        'importance': 'HIGH' if len(papers) >= 3 else 'MEDIUM' if len(papers) >= 2 else 'LOW',
-                        'questions': [q['question'] for q in found_questions[:4]],
-                        'papers': papers[:4],
-                        'question_positions': [q.get('position','') for q in found_questions[:4]],
-                        'marks_each_time': [q.get('marks',0) for q in found_questions[:4]],
-                        'consistent_position': False,
-                        'consistent_marks': False,
-                        'pattern_note': '',
-                        'tip': '',
-                        'keywords': []
-                    })
-        # Re-sort after seeding
-        clusters.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
-        clusters = clusters[:15]
-
         # Step 4: Enrich with tips, predictions, study plan (1 Groq call)
         enrichment = enrich_with_groq(clusters, user_name, university, subject, client)
         predictions = enrichment.get('predictions', [])
         study_plan = enrichment.get('study_plan', {})
         paper_pattern = enrichment.get('paper_pattern', {})
-
-        enrichment = enrich_with_groq(clusters, user_name, univ)
-predictions = enrichment.get('predictions', [])
-study_plan = enrichment.get('study_plan', {})
-paper_pattern = enrichment.get('paper_pattern', {})
-
-# --- Fallback if predictions missing or <10 ---
-if not predictions or len(predictions) < 10:
-    predictions = []
-    for c in clusters[:10]:
-        predictions.append({
-            "question": f"Explain {c['topic']}",
-            "topic": c['topic'],
-            "confidence": "MEDIUM",
-            "reason": "Fallback from repeated topic",
-            "likely_position": "Q2A",
-            "likely_marks": 10,
-            "frequency": c['frequency']
-        })
-    enrichment['predictions'] = predictions
-
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
