@@ -47,16 +47,16 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .pill-y{color:var(--yellow);border-color:rgba(241,196,15,0.3);background:var(--yellowdim)}
 
 /* ── QUOTE TICKER ── */
-.quote-ticker{position:relative;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:6px;padding:18px 22px;max-width:640px;overflow:hidden;min-height:72px;display:flex;align-items:center}
-.quote-ticker::before{content:'❝';position:absolute;top:8px;right:14px;font-size:40px;color:rgba(124,92,252,0.12);font-family:serif;line-height:1}
-.quote-slot{position:relative;width:100%}
-.quote-text{font-size:15px;font-style:italic;color:var(--text);line-height:1.6;font-weight:400;opacity:1;transform:translateY(0);transition:opacity 0.5s ease,transform 0.5s ease}
-.quote-text.fade-out{opacity:0;transform:translateY(-8px)}
-.quote-text.fade-in{opacity:0;transform:translateY(8px)}
-.quote-author{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--purple);letter-spacing:0.12em;text-transform:uppercase;margin-top:6px;opacity:0.8}
+.quote-ticker{position:relative;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:6px;padding:18px 22px 14px;max-width:640px;overflow:hidden;min-height:80px;display:flex;flex-direction:column;justify-content:center}
+.quote-ticker::before{content:'❝';position:absolute;top:6px;right:14px;font-size:42px;color:rgba(124,92,252,0.1);font-family:serif;line-height:1;pointer-events:none}
+.quote-text{font-size:15px;font-style:italic;color:var(--text);line-height:1.65;font-weight:400;transition:opacity 0.45s ease,transform 0.45s ease;opacity:1;transform:translateY(0)}
+.quote-text.out{opacity:0;transform:translateY(-8px)}
+.quote-text.in{opacity:0;transform:translateY(8px)}
+.quote-author{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--purple);letter-spacing:0.12em;text-transform:uppercase;margin-top:7px;opacity:0.75;transition:opacity 0.45s ease}
+.quote-author.out{opacity:0}
 .quote-dots{display:flex;gap:5px;margin-top:10px}
-.qdot{width:5px;height:5px;border-radius:50%;background:var(--border);transition:background 0.3s,transform 0.3s}
-.qdot.active{background:var(--purple);transform:scale(1.3)}
+.qdot{width:5px;height:5px;border-radius:50%;background:var(--border);transition:background 0.3s,transform 0.3s;cursor:pointer}
+.qdot.active{background:var(--purple);transform:scale(1.35)}
 
 .upload-wrap{padding:0 40px 60px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
 .upload-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:32px;position:relative;overflow:hidden}
@@ -64,8 +64,9 @@ h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
 .card-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.06em;margin-bottom:6px}
 .card-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:24px}
 
-.selector-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+/* subject selector only — university removed */
 .field-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;display:block;margin-bottom:6px}
+.subject-row{margin-bottom:20px}
 select{width:100%;background:var(--bg3);border:1px solid var(--borderhi);border-radius:4px;padding:10px 14px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;cursor:pointer;transition:border-color 0.2s;-webkit-appearance:none}
 select:focus{border-color:var(--orange)}
 
@@ -115,7 +116,7 @@ select:focus{border-color:var(--orange)}
 .modal-btn:hover{background:#ff7722;transform:translateY(-1px)}
 .modal-hint{font-size:10px;color:var(--muted);margin-top:10px;font-family:'JetBrains Mono',monospace}
 
-/* ── LOADING ── */
+/* LOADING */
 .loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,8,16,0.96);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center}
 .loading-overlay.on{display:flex}
 .load-orb{width:64px;height:64px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--orange);border-right-color:var(--purple);animation:spin 1s linear infinite;position:relative}
@@ -130,20 +131,7 @@ select:focus{border-color:var(--orange)}
 .lstep.done .lstep-dot{background:var(--green)}
 .load-progress{width:260px;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
 .load-bar{height:100%;background:linear-gradient(90deg,var(--orange),var(--purple));width:0%;transition:width 0.5s ease}
-
-/* ── HYPE LINE (loading cheer) ── */
-.load-hype{
-  font-family:'Bebas Neue',sans-serif;
-  font-size:22px;
-  letter-spacing:0.1em;
-  color:var(--orange);
-  text-align:center;
-  min-height:30px;
-  opacity:0;
-  transform:translateY(6px);
-  transition:opacity 0.6s ease, transform 0.6s ease;
-  text-shadow:0 0 20px var(--orangeglow);
-}
+.load-hype{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.1em;color:var(--orange);min-height:30px;opacity:0;transform:translateY(6px);transition:opacity 0.6s ease,transform 0.6s ease;text-shadow:0 0 20px var(--orangeglow)}
 .load-hype.show{opacity:1;transform:translateY(0)}
 
 /* RESULTS */
@@ -160,20 +148,13 @@ select:focus{border-color:var(--orange)}
 .btn-sm{padding:9px 16px;background:transparent;border:1px solid var(--borderhi);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
 .btn-sm:hover{border-color:var(--orange);color:var(--orange)}
 .btn-sm.primary{background:var(--orange);color:#000;border-color:var(--orange)}.btn-sm.primary:hover{background:#ff7722}
-.stat-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:28px}
+.stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:28px}
 .scard{background:var(--bg2);padding:14px}
 .scard-num{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;color:var(--orange);margin-bottom:3px}
 .scard-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
 .tab-panel{display:none}.tab-panel.active{display:block}
 
-.pattern-card{background:var(--bg2);border:1px solid rgba(124,92,252,0.3);border-radius:8px;padding:22px;margin-bottom:20px;border-left:3px solid var(--purple)}
-.pattern-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.05em;color:var(--purple);margin-bottom:14px}
-.pattern-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
-.pstat{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px}
-.pstat-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px}
-.pstat-value{font-size:12px;color:var(--text);line-height:1.5}
-.insight-box{background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:6px;padding:10px 14px;margin-top:10px;font-size:12px;color:var(--purple);font-family:'JetBrains Mono',monospace;line-height:1.6}
-
+/* CLUSTERS */
 .clusters{display:flex;flex-direction:column;gap:10px}
 .ccard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:border-color 0.2s;animation:slideUp 0.3s ease both}
 @keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -207,6 +188,7 @@ select:focus{border-color:var(--orange)}
 .qmarks{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:2px;background:var(--bluedim);color:var(--blue)}
 .qtext{font-size:13px;line-height:1.65}
 
+/* PREDICTIONS */
 .pred-grid{display:flex;flex-direction:column;gap:10px}
 .pcard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px;animation:slideUp 0.3s ease both;position:relative;overflow:hidden}
 .pcard::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px}
@@ -222,31 +204,22 @@ select:focus{border-color:var(--orange)}
 .pmeta-tag.topic-tag{background:var(--orangedim);color:var(--orange)}
 .preason{font-size:11px;color:var(--mutedbr);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;font-family:'JetBrains Mono',monospace}
 
-.plan-top{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
-.plan-strategy{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px;border-left:3px solid var(--purple)}
-.plan-strategy-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.05em;margin-bottom:8px;color:var(--purple)}
-.plan-strategy-text{font-size:12px;line-height:1.7;color:var(--mutedbr)}
-.golden-box{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px;border-left:3px solid var(--yellow)}
-.golden-title{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.05em;margin-bottom:10px;color:var(--yellow)}
-.golden-tags{display:flex;flex-wrap:wrap;gap:6px}
-.gtag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 9px;background:var(--yellowdim);color:var(--yellow);border-radius:2px;text-transform:uppercase}
-.days-grid{display:flex;flex-direction:column;gap:7px}
-.day-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;animation:slideUp 0.3s ease both}
-.day-head{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;user-select:none}
-.day-num{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);min-width:56px}
-.day-info{flex:1}.day-focus{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px}
-.day-hrs{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
-.day-badge{padding:3px 8px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:9px;text-transform:uppercase}
-.day-badge.HIGH{background:var(--reddim);color:var(--red)}.day-badge.MEDIUM{background:var(--yellowdim);color:var(--yellow)}.day-badge.LOW{background:var(--greendim);color:var(--green)}
-.day-chev{color:var(--muted);font-size:11px;transition:transform 0.2s}.day-card.open .day-chev{transform:rotate(90deg)}
-.day-body{display:none;padding:0 16px 14px;border-top:1px solid var(--border)}.day-card.open .day-body{display:block}
-.day-tasks{display:flex;flex-direction:column;gap:5px;margin-top:10px}
-.dtask{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5;color:var(--mutedbr)}
-.dtask::before{content:'✓';color:var(--green);font-size:11px;flex-shrink:0;margin-top:1px}
-.dont-skip{background:var(--reddim);border:1px solid rgba(231,76,60,0.2);border-radius:6px;padding:14px 16px;margin-top:16px}
-.ds-title{font-family:'Bebas Neue',sans-serif;font-size:15px;color:var(--red);letter-spacing:0.05em;margin-bottom:7px}
-.ds-tags{display:flex;flex-wrap:wrap;gap:6px}
-.ds-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 9px;background:rgba(231,76,60,0.08);color:var(--red);border-radius:2px}
+/* LAST HOUR PREP */
+.lhp-header{background:var(--bg2);border:1px solid rgba(231,76,60,0.3);border-left:3px solid var(--red);border-radius:8px;padding:22px;margin-bottom:22px}
+.lhp-message{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.06em;color:var(--red);margin-bottom:10px}
+.lhp-strategy{font-size:13px;color:var(--mutedbr);line-height:1.7;padding:10px 14px;background:var(--reddim);border-radius:4px;border:1px solid rgba(231,76,60,0.15);font-family:'JetBrains Mono',monospace}
+.lhp-grid{display:flex;flex-direction:column;gap:12px}
+.lhp-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;animation:slideUp 0.3s ease both;position:relative}
+.lhp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--orange))}
+.lhp-rank{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--red);letter-spacing:0.1em;padding:12px 16px 0;text-transform:uppercase}
+.lhp-topic{font-size:15px;font-weight:700;padding:4px 16px 0;text-transform:uppercase;letter-spacing:0.04em}
+.lhp-q{font-size:13px;padding:8px 16px;color:var(--mutedbr);line-height:1.6;border-bottom:1px solid var(--border);font-style:italic}
+.lhp-meta{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;align-items:flex-start}
+.lhp-why{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--reddim);color:var(--red)}
+.lhp-pos{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--purpledim);color:var(--purple)}
+.lhp-marks{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--bluedim);color:var(--blue)}
+.lhp-tip{display:flex;gap:8px;align-items:flex-start;background:var(--orangedim);border:1px solid rgba(255,92,0,0.18);border-radius:0 0 6px 6px;padding:10px 16px;font-size:12px;line-height:1.6;color:var(--orange2)}
+
 .reset-wrap{text-align:center;margin-top:36px}
 .reset-btn{padding:9px 22px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s}.reset-btn:hover{color:var(--text);border-color:var(--borderhi)}
 
@@ -258,10 +231,8 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
 @media(max-width:900px){
   .upload-wrap{grid-template-columns:1fr;padding:0 20px 40px}.hero{padding:36px 20px 28px}
   h1{font-size:clamp(48px,13vw,80px)}nav{padding:14px 20px}.results{padding:0 20px 60px}
-  .stat-strip{grid-template-columns:repeat(3,1fr)}.plan-top{grid-template-columns:1fr}
-  .feat-grid{grid-template-columns:repeat(2,1fr)}footer{padding:16px 20px}
-  .selector-row{grid-template-columns:1fr}
-  .quote-ticker{max-width:100%}
+  .stat-strip{grid-template-columns:repeat(2,1fr)}.feat-grid{grid-template-columns:repeat(2,1fr)}
+  footer{padding:16px 20px}.quote-ticker{max-width:100%}
 }
 </style>
 </head>
@@ -296,16 +267,14 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
     <span class="pill pill-p">📍 Question Position</span>
     <span class="pill pill-b">📝 Marks Pattern</span>
     <span class="pill pill-g">🔮 Predictions</span>
-    <span class="pill pill-y">📅 Study Plan</span>
+    <span class="pill pill-r" style="color:var(--red);border-color:rgba(231,76,60,0.3);background:var(--reddim)">⚡ Last Hour Prep</span>
   </div>
 
-  <!-- ── QUOTE TICKER ── -->
+  <!-- QUOTES -->
   <div class="quote-ticker" id="quoteTicker">
-    <div class="quote-slot">
-      <div class="quote-text" id="quoteText"></div>
-      <div class="quote-author" id="quoteAuthor"></div>
-      <div class="quote-dots" id="quoteDots"></div>
-    </div>
+    <div class="quote-text" id="quoteText"></div>
+    <div class="quote-author" id="quoteAuthor"></div>
+    <div class="quote-dots" id="quoteDots"></div>
   </div>
 </section>
 
@@ -314,26 +283,20 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
     <div class="card-title">Upload PYQ Papers</div>
     <div class="card-sub">// 2–6 papers · PDF only · text or scanned</div>
 
-    <div class="selector-row">
-      <div>
-        <label class="field-label">University</label>
-        <select id="universitySelect" onchange="loadSubjects()">
-          <option value="mumbai_be">Mumbai University — BE</option>
-        </select>
-      </div>
-      <div>
-        <label class="field-label">Subject</label>
-        <select id="subjectSelect">
-          <option value="spcc">System Programming & CC</option>
-          <option value="dbms">Database Management</option>
-          <option value="os">Operating Systems</option>
-          <option value="cn">Computer Networks</option>
-          <option value="dsa">Data Structures & Algo</option>
-          <option value="ai">Artificial Intelligence</option>
-          <option value="ml">Machine Learning</option>
-          <option value="general">Other Subject</option>
-        </select>
-      </div>
+    <!-- SUBJECT SELECTOR ONLY — university removed -->
+    <div class="subject-row">
+      <label class="field-label">Subject</label>
+      <select id="subjectSelect">
+        <option value="spcc">System Programming & CC</option>
+        <option value="dbms">Database Management</option>
+        <option value="os">Operating Systems</option>
+        <option value="cn">Computer Networks</option>
+        <option value="mc">Mobile Computing</option>
+        <option value="dsa">Data Structures & Algo</option>
+        <option value="ai">Artificial Intelligence</option>
+        <option value="ml">Machine Learning</option>
+        <option value="general">Other Subject</option>
+      </select>
     </div>
 
     <div class="dropzone" id="dz" onclick="document.getElementById('fileinput').click()">
@@ -351,35 +314,26 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
     <div class="card-title">What You Get</div>
     <div class="card-sub">// the smart student's edge</div>
     <div class="how-steps">
-      <div class="hstep">
-        <div class="hstep-num">01</div>
-        <div>
-          <div class="hstep-title">Select Your Subject</div>
-          <div class="hstep-desc">Pick your university and subject. ASHLYSIS already knows the paper structure — no guessing needed.</div>
-        </div>
-      </div>
-      <div class="hstep">
-        <div class="hstep-num">02</div>
-        <div>
-          <div class="hstep-title">Upload Papers</div>
-          <div class="hstep-desc">Drop 2–10 PYQ PDFs. Text-based or scanned — both work. The more papers, the better the pattern detection.</div>
-        </div>
-      </div>
-      <div class="hstep">
-        <div class="hstep-num">03</div>
-        <div>
-          <div class="hstep-title">Get Full Intelligence</div>
-          <div class="hstep-desc">Ranked repeats with position + marks, predictions for next exam, 7-day study plan, downloadable report.</div>
-        </div>
-      </div>
+      <div class="hstep"><div class="hstep-num">01</div><div>
+        <div class="hstep-title">Select Your Subject</div>
+        <div class="hstep-desc">Pick your subject. ASHLYSIS knows the exact topics that repeat in Mumbai University BE papers.</div>
+      </div></div>
+      <div class="hstep"><div class="hstep-num">02</div><div>
+        <div class="hstep-title">Upload Papers</div>
+        <div class="hstep-desc">Drop 2–6 PYQ PDFs. Text or scanned — both work. More papers = better pattern detection.</div>
+      </div></div>
+      <div class="hstep"><div class="hstep-num">03</div><div>
+        <div class="hstep-title">Get Exam Intelligence</div>
+        <div class="hstep-desc">Ranked repeats with position + marks, predictions for next exam, and Last Hour Prep — 5 questions to guarantee passing.</div>
+      </div></div>
     </div>
     <div class="feat-grid">
       <div class="feat"><span class="feat-icon">🔁</span><div class="feat-label">Repeats</div></div>
       <div class="feat"><span class="feat-icon">📍</span><div class="feat-label">Position</div></div>
       <div class="feat"><span class="feat-icon">📝</span><div class="feat-label">Marks</div></div>
       <div class="feat"><span class="feat-icon">🔮</span><div class="feat-label">Predict</div></div>
-      <div class="feat"><span class="feat-icon">📊</span><div class="feat-label">Pattern</div></div>
-      <div class="feat"><span class="feat-icon">📅</span><div class="feat-label">Plan</div></div>
+      <div class="feat"><span class="feat-icon">⚡</span><div class="feat-label">Last Hour</div></div>
+      <div class="feat"><span class="feat-icon">↓</span><div class="feat-label">Export</div></div>
     </div>
   </div>
 </div>
@@ -395,10 +349,9 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
     <div class="lstep" id="ls2"><span class="lstep-dot"></span>Finding repeat patterns + positions</div>
     <div class="lstep" id="ls3"><span class="lstep-dot"></span>Analyzing marks & paper structure</div>
     <div class="lstep" id="ls4"><span class="lstep-dot"></span>Predicting next exam questions</div>
-    <div class="lstep" id="ls5"><span class="lstep-dot"></span>Building your personal study plan</div>
+    <div class="lstep" id="ls5"><span class="lstep-dot"></span>Building your Last Hour Prep</div>
   </div>
   <div class="load-progress"><div class="load-bar" id="loadBar"></div></div>
-  <!-- Hype line shown during loading -->
   <div class="load-hype" id="loadHype"></div>
 </div>
 
@@ -418,25 +371,27 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
 
   <div class="stat-strip" id="statStrip"></div>
 
+  <!-- TABS: Repeats | Predictions | Last Hour Prep -->
   <div class="tabs-wrap">
     <button class="tab active" onclick="switchTab('repeats',this)">🔁 REPEATS <span class="tab-badge" id="tb1">0</span></button>
-    <button class="tab" onclick="switchTab('pattern',this)">📊 PAPER PATTERN</button>
     <button class="tab" onclick="switchTab('predictions',this)">🔮 PREDICTIONS <span class="tab-badge" id="tb2">0</span></button>
-    <button class="tab" onclick="switchTab('studyplan',this)">📅 STUDY PLAN</button>
+    <button class="tab" onclick="switchTab('lasthour',this)" style="color:var(--red)">⚡ LAST HOUR PREP</button>
   </div>
 
-  <div class="tab-panel active" id="panel-repeats"><div class="clusters" id="clusterList"></div></div>
-  <div class="tab-panel" id="panel-pattern"><div id="patternContent"></div></div>
+  <div class="tab-panel active" id="panel-repeats">
+    <div class="clusters" id="clusterList"></div>
+  </div>
+
   <div class="tab-panel" id="panel-predictions">
     <div style="background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--purple);font-family:'JetBrains Mono',monospace;line-height:1.7">
-      ⚡ Predicted based on repeat patterns. Includes likely question position and marks.
+      ⚡ Predicted based on repeat frequency and rotation patterns. Includes likely question position and marks.
     </div>
     <div class="pred-grid" id="predList"></div>
   </div>
-  <div class="tab-panel" id="panel-studyplan">
-    <div class="plan-top" id="planTop"></div>
-    <div class="days-grid" id="daysList"></div>
-    <div id="dontSkip"></div>
+
+  <div class="tab-panel" id="panel-lasthour">
+    <div class="lhp-header" id="lhpHeader"></div>
+    <div class="lhp-grid" id="lhpGrid"></div>
   </div>
 
   <div class="reset-wrap"><button class="reset-btn" onclick="resetApp()">← Start New Analysis</button></div>
@@ -453,110 +408,94 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
 <script>
 let files=[], lastData=null, userName='';
 
-// ═══════════════════════════════════════════════
-//  QUOTES — cycles every 60s, pure JS, zero load
-// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// QUOTES — 60s cycle
+// ═══════════════════════════════════════════
 const QUOTES = [
   { text: "Art is never finished, only abandoned.", author: "— Leonardo da Vinci" },
   { text: "Haar mangunga nahi, vardaan mangunga nahi.", author: "— Ramdhari Singh Dinkar" },
   { text: "The secret of getting ahead is getting started.", author: "— Mark Twain" },
   { text: "You don't have to be great to start, but you have to start to be great.", author: "— Zig Ziglar" },
   { text: "Success is the sum of small efforts, repeated day in and day out.", author: "— Robert Collier" },
+  { text: "It always seems impossible until it's done.", author: "— Nelson Mandela" },
+  { text: "Don't watch the clock; do what it does. Keep going.", author: "— Sam Levenson" },
 ];
-
-let quoteIndex = 0;
-let quoteTimer = null;
+let qIdx = 0, qTimer = null;
 
 function initQuotes() {
-  // build dots
   const dotsEl = document.getElementById('quoteDots');
-  dotsEl.innerHTML = QUOTES.map((_, i) =>
-    `<span class="qdot${i===0?' active':''}" id="qd${i}"></span>`
-  ).join('');
-  // show first immediately
+  dotsEl.innerHTML = QUOTES.map((_,i) => `<span class="qdot${i===0?' active':''}" id="qd${i}" onclick="jumpQuote(${i})"></span>`).join('');
   document.getElementById('quoteText').textContent = QUOTES[0].text;
   document.getElementById('quoteAuthor').textContent = QUOTES[0].author;
-  // start cycling
-  quoteTimer = setInterval(cycleQuote, 60000);
+  qTimer = setInterval(cycleQuote, 60000);
 }
 
 function cycleQuote() {
-  const textEl = document.getElementById('quoteText');
-  const authorEl = document.getElementById('quoteAuthor');
-
-  // fade out
-  textEl.classList.add('fade-out');
-  authorEl.classList.add('fade-out');
-
+  const tEl = document.getElementById('quoteText');
+  const aEl = document.getElementById('quoteAuthor');
+  tEl.classList.add('out'); aEl.classList.add('out');
   setTimeout(() => {
-    // update dot
-    document.getElementById('qd'+quoteIndex).classList.remove('active');
-    quoteIndex = (quoteIndex + 1) % QUOTES.length;
-    document.getElementById('qd'+quoteIndex).classList.add('active');
-
-    // swap text
-    textEl.classList.remove('fade-out');
-    textEl.classList.add('fade-in');
-    authorEl.classList.remove('fade-out');
-    authorEl.classList.add('fade-in');
-    textEl.textContent = QUOTES[quoteIndex].text;
-    authorEl.textContent = QUOTES[quoteIndex].author;
-
-    // fade in
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        textEl.classList.remove('fade-in');
-        authorEl.classList.remove('fade-in');
-      });
-    });
-  }, 500);
+    document.getElementById('qd'+qIdx).classList.remove('active');
+    qIdx = (qIdx + 1) % QUOTES.length;
+    document.getElementById('qd'+qIdx).classList.add('active');
+    tEl.classList.remove('out'); tEl.classList.add('in');
+    aEl.classList.remove('out'); aEl.classList.add('in');
+    tEl.textContent = QUOTES[qIdx].text;
+    aEl.textContent = QUOTES[qIdx].author;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      tEl.classList.remove('in'); aEl.classList.remove('in');
+    }));
+  }, 460);
 }
 
-// ═══════════════════════════════════════════════
-//  HYPE LINES — shown during loading, random pick
-// ═══════════════════════════════════════════════
-const HYPE_LINES = [
+function jumpQuote(i) {
+  clearInterval(qTimer);
+  const tEl = document.getElementById('quoteText');
+  const aEl = document.getElementById('quoteAuthor');
+  tEl.classList.add('out'); aEl.classList.add('out');
+  setTimeout(() => {
+    document.getElementById('qd'+qIdx).classList.remove('active');
+    qIdx = i;
+    document.getElementById('qd'+qIdx).classList.add('active');
+    tEl.classList.remove('out'); tEl.classList.add('in');
+    aEl.classList.remove('out'); aEl.classList.add('in');
+    tEl.textContent = QUOTES[qIdx].text;
+    aEl.textContent = QUOTES[qIdx].author;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      tEl.classList.remove('in'); aEl.classList.remove('in');
+    }));
+  }, 460);
+  qTimer = setInterval(cycleQuote, 60000);
+}
+
+// ═══════════════════════════════════════════
+// HYPE LINES during loading
+// ═══════════════════════════════════════════
+const HYPE = [
   "you slay, girl 💅",
   "abki baar 8 CGPA paar 🎯",
   "with ASHLYSIS, no KT 🚀",
   "cheer up, mate 💪",
+  "ek baar aur padh le yaar 📚",
+  "almost there... 🔥",
 ];
-
 let hypeTimer = null;
-
-function showRandomHype() {
-  const el = document.getElementById('loadHype');
-  const line = HYPE_LINES[Math.floor(Math.random() * HYPE_LINES.length)];
-
-  // fade out first
-  el.classList.remove('show');
-  setTimeout(() => {
-    el.textContent = line;
-    el.classList.add('show');
-  }, 400);
-}
-
-function startHype() {
-  showRandomHype();                        // show one immediately
-  hypeTimer = setInterval(showRandomHype, 4000); // rotate every 4s during wait
-}
-
-function stopHype() {
-  clearInterval(hypeTimer);
-  hypeTimer = null;
+function showHype() {
   const el = document.getElementById('loadHype');
   el.classList.remove('show');
+  setTimeout(() => { el.textContent = HYPE[Math.floor(Math.random()*HYPE.length)]; el.classList.add('show'); }, 400);
 }
+function startHype() { showHype(); hypeTimer = setInterval(showHype, 4000); }
+function stopHype() { clearInterval(hypeTimer); hypeTimer = null; document.getElementById('loadHype').classList.remove('show'); }
 
-// ═══════════════════════════════════════════════
-//  DRAG & DROP
-// ═══════════════════════════════════════════════
-const dz=document.getElementById('dz');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
-dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.pdf')))});
-document.getElementById('fileinput').addEventListener('change',e=>{addFiles(Array.from(e.target.files));e.target.value=''});
-
+// ═══════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.pdf')))});
+document.getElementById('fileinput').addEventListener('change', e=>{addFiles(Array.from(e.target.files));e.target.value=''});
 function addFiles(nf){nf.forEach(f=>{if(!files.find(x=>x.name===f.name))files.push(f)});renderFiles();updateBtn()}
 function removeFile(i){files.splice(i,1);renderFiles();updateBtn()}
 function renderFiles(){
@@ -568,25 +507,19 @@ function renderFiles(){
 function updateBtn(){document.getElementById('analyzeBtn').disabled=files.length<2}
 
 // ── NAME MODAL ──
-function requestName(){
-  hideErr();
-  document.getElementById('nameModal').classList.add('on');
-  setTimeout(()=>document.getElementById('nameInput').focus(),100);
-}
+function requestName(){hideErr();document.getElementById('nameModal').classList.add('on');setTimeout(()=>document.getElementById('nameInput').focus(),100)}
 document.getElementById('nameInput').addEventListener('keypress',e=>{if(e.key==='Enter')confirmName()});
 function confirmName(){
   const val=document.getElementById('nameInput').value.trim();
   if(!val){document.getElementById('nameInput').style.borderColor='var(--red)';return}
-  userName=val;
-  document.getElementById('nameModal').classList.remove('on');
-  startAnalysis();
+  userName=val;document.getElementById('nameModal').classList.remove('on');startAnalysis();
 }
 
 // ── ANALYZE ──
 async function startAnalysis(){
   showLoading();
   const steps=['ls1','ls2','ls3','ls4','ls5'];
-  const subs=['Reading your question papers...','Finding repeat patterns & positions...','Analyzing marks & paper structure...','Predicting exam questions...','Building your study plan...'];
+  const subs=['Reading your question papers...','Finding repeat patterns & positions...','Analyzing marks & paper structure...','Predicting exam questions...','Building Last Hour Prep...'];
   const progs=[10,30,55,75,90];
   let si=0;
   const iv=setInterval(()=>{
@@ -597,7 +530,6 @@ async function startAnalysis(){
   const fd=new FormData();
   files.forEach(f=>fd.append('files',f));
   fd.append('user_name',userName);
-  fd.append('university',document.getElementById('universitySelect').value);
   fd.append('subject',document.getElementById('subjectSelect').value);
 
   try{
@@ -615,22 +547,27 @@ async function startAnalysis(){
 
 // ── SHOW RESULTS ──
 function showResults(data){
-  const{clusters,predictions,study_plan,paper_pattern,stats,user_name,university,subject,ocr_used}=data;
-  document.getElementById('resultsGreeting').textContent=`Hey ${user_name} 👋 — ${subject} analysis complete`;
-  const ocrNote=ocr_used?.length?` · 🔍 OCR: ${ocr_used.join(', ')}`:'';
-  document.getElementById('resultsMeta').textContent=`${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions?.length||0} predictions${ocrNote}`;
+  const{clusters,predictions,last_hour_prep,stats,user_name,subject,ocr_used}=data;
 
+  document.getElementById('resultsGreeting').textContent=`Hey ${user_name} 👋 — ${subject} analysis complete`;
+  const ocrNote=ocr_used?.length?` · 🔍 OCR used`:'';
+  document.getElementById('resultsMeta').textContent=`${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions.length} predictions${ocrNote}`;
+
+  // stat strip
   document.getElementById('statStrip').innerHTML=[
-    [stats.papers,'Papers'],[stats.clusters,'Repeats'],
-    [stats.high_priority,'HIGH Priority'],[predictions?.length||0,'Predictions'],
-    [clusters.filter(c=>c.consistent_marks).length,'Always Same Marks']
+    [stats.papers,'Papers'],
+    [stats.clusters,'Repeats'],
+    [stats.high_priority,'HIGH Priority'],
+    [predictions.length,'Predictions'],
   ].map(([n,l])=>`<div class="scard"><div class="scard-num">${n}</div><div class="scard-lbl">${l}</div></div>`).join('');
 
-  document.getElementById('tb1').textContent=clusters.length;
-  document.getElementById('tb2').textContent=predictions?.length||0;
+  // tab badges — set AFTER we have the data, fixes the "shows 0" bug
+  document.getElementById('tb1').textContent = clusters.length;
+  document.getElementById('tb2').textContent = predictions.length;
 
+  // ── REPEATS ──
   document.getElementById('clusterList').innerHTML=clusters.map((c,i)=>{
-    const pos=c.question_positions||[],marks=c.marks_each_time||[],papers=c.papers||[];
+    const pos=c.question_positions||[], marks=c.marks_each_time||[], papers=c.papers||[];
     return`<div class="ccard ${c.importance}" id="cc${i}" style="animation-delay:${i*0.04}s">
       <div class="chead" onclick="tog('cc${i}')">
         <div class="cfreq-wrap"><div class="cfreq">${c.frequency}</div><div class="cfreq-label">times</div></div>
@@ -660,79 +597,52 @@ function showResults(data){
           </div>`).join('')}
         </div>
       </div>
-    </div>`}).join('');
+    </div>`;
+  }).join('');
 
-  if(paper_pattern){
-    document.getElementById('patternContent').innerHTML=`
-      <div class="pattern-card">
-        <div class="pattern-title">📊 PAPER STRUCTURE — ${subject}</div>
-        <div class="pattern-grid">
-          <div class="pstat"><div class="pstat-label">Compulsory Q1</div><div class="pstat-value">${paper_pattern.compulsory_question||'—'}</div></div>
-          <div class="pstat"><div class="pstat-label">Optional Q2-Q6</div><div class="pstat-value">${paper_pattern.optional_questions||'—'}</div></div>
-          <div class="pstat"><div class="pstat-label">Total Marks</div><div class="pstat-value">${paper_pattern.total_marks||80}</div></div>
-          <div class="pstat"><div class="pstat-label">Duration</div><div class="pstat-value">${paper_pattern.duration||'3 hours'}</div></div>
-        </div>
-        ${paper_pattern.key_insight?`<div class="insight-box">💡 ${paper_pattern.key_insight}</div>`:''}
-      </div>
-      <div style="margin-top:18px">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.05em;margin-bottom:14px">TOPICS BY QUESTION POSITION</div>
-        ${buildPositionMap(clusters)}
-      </div>`;
-  }
-
-  if(predictions?.length){
+  // ── PREDICTIONS — always render if array has items ──
+  if(Array.isArray(predictions) && predictions.length > 0){
     document.getElementById('predList').innerHTML=predictions.map((p,i)=>`
-      <div class="pcard ${p.confidence}" style="animation-delay:${i*0.04}s">
-        <div class="pcard-top"><div class="pcard-num">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question}</div></div>
+      <div class="pcard ${p.confidence||'MEDIUM'}" style="animation-delay:${i*0.04}s">
+        <div class="pcard-top"><div class="pcard-num">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question||p.topic}</div></div>
         <div class="pcard-meta">
-          <span class="pmeta-tag conf-${p.confidence}">${p.confidence}</span>
+          <span class="pmeta-tag conf-${p.confidence||'MEDIUM'}">${p.confidence||'MEDIUM'}</span>
           ${p.likely_position?`<span class="pmeta-tag pos-tag">📍 ${p.likely_position}</span>`:''}
           ${p.likely_marks?`<span class="pmeta-tag marks-tag">📝 ~${p.likely_marks}m</span>`:''}
-          <span class="pmeta-tag topic-tag">${p.topic}</span>
-          <span class="pmeta-tag" style="background:var(--greendim);color:var(--green)">Seen ${p.frequency}×</span>
+          ${p.topic?`<span class="pmeta-tag topic-tag">${p.topic}</span>`:''}
+          ${p.frequency?`<span class="pmeta-tag" style="background:var(--greendim);color:var(--green)">Seen ${p.frequency}×</span>`:''}
         </div>
-        <div class="preason">Why → ${p.reason}</div>
+        ${p.reason?`<div class="preason">Why → ${p.reason}</div>`:''}
       </div>`).join('');
+  } else {
+    document.getElementById('predList').innerHTML='<p style="color:var(--muted);font-size:13px;padding:20px 0">Predictions are being generated. If this is empty, try re-analyzing.</p>';
   }
 
-  if(study_plan){
-    document.getElementById('planTop').innerHTML=`
-      <div class="plan-strategy"><div class="plan-strategy-title">📋 YOUR STRATEGY</div><div class="plan-strategy-text">${study_plan.strategy||''}</div></div>
-      <div class="golden-box"><div class="golden-title">⭐ GOLDEN TOPICS</div><div class="golden-tags">${(study_plan.golden_topics||[]).map(t=>`<span class="gtag">${t}</span>`).join('')}</div></div>`;
-    document.getElementById('daysList').innerHTML=(study_plan.days||[]).map((d,i)=>`
-      <div class="day-card" id="dc${i}" style="animation-delay:${i*0.05}s">
-        <div class="day-head" onclick="tog('dc${i}')">
-          <div class="day-num">DAY ${d.day}</div>
-          <div class="day-info"><div class="day-focus">${d.focus}</div><div class="day-hrs">${d.hours} hrs recommended</div></div>
-          <span class="day-badge ${d.priority}">${d.priority}</span><span class="day-chev">▶</span>
-        </div>
-        <div class="day-body"><div class="day-tasks">${(d.tasks||[]).map(t=>`<div class="dtask">${t}</div>`).join('')}</div></div>
-      </div>`).join('');
-    if(study_plan.dont_skip?.length){
-      document.getElementById('dontSkip').innerHTML=`<div class="dont-skip"><div class="ds-title">⚠ NEVER SKIP THESE</div><div class="ds-tags">${study_plan.dont_skip.map(t=>`<span class="ds-tag">${t}</span>`).join('')}</div></div>`;
-    }
-  }
+  // ── LAST HOUR PREP ──
+  const lhp = last_hour_prep || {};
+  document.getElementById('lhpHeader').innerHTML=`
+    <div class="lhp-message">⚡ ${lhp.message || 'Focus. You can do this.'}</div>
+    <div class="lhp-strategy">${lhp.passing_strategy || 'Attempt all of Q1 (20 marks) + any 2 from Q2-Q6 (40 marks) = 60 marks minimum passing.'}</div>`;
+
+  const mustDo = lhp.must_do || [];
+  document.getElementById('lhpGrid').innerHTML = mustDo.length > 0
+    ? mustDo.map((q,i)=>`
+        <div class="lhp-card" style="animation-delay:${i*0.07}s">
+          <div class="lhp-rank">#${q.rank||i+1} MUST DO</div>
+          <div class="lhp-topic">${q.topic||''}</div>
+          <div class="lhp-q">${q.question||''}</div>
+          <div class="lhp-meta">
+            ${q.why?`<span class="lhp-why">📊 ${q.why}</span>`:''}
+            ${q.position?`<span class="lhp-pos">📍 ${q.position}</span>`:''}
+            ${q.marks?`<span class="lhp-marks">📝 ${q.marks}m</span>`:''}
+          </div>
+          ${q.quick_tip?`<div class="lhp-tip"><span>💡</span><span>${q.quick_tip}</span></div>`:''}
+        </div>`).join('')
+    : '<p style="color:var(--muted);font-size:13px;padding:20px 0">Last Hour Prep questions will appear here.</p>';
 
   document.getElementById('uploadWrap').style.display='none';
   document.getElementById('results').classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function buildPositionMap(clusters){
-  const pm={};
-  clusters.forEach(c=>{(c.question_positions||[]).forEach(pos=>{
-    if(!pos)return;
-    const k=pos.replace(/[ab]/gi,'').trim();
-    if(!pm[k])pm[k]=[];
-    if(!pm[k].includes(c.topic))pm[k].push(c.topic);
-  })});
-  if(!Object.keys(pm).length)return'<p style="color:var(--muted);font-size:13px">Position data not available.</p>';
-  return`<div style="display:flex;flex-direction:column;gap:7px">`+
-    Object.entries(pm).sort().map(([pos,topics])=>`
-      <div style="display:flex;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px 14px">
-        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--orange);min-width:36px">${pos}</span>
-        <div style="display:flex;flex-wrap:wrap;gap:5px">${topics.map(t=>`<span style="font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 9px;background:var(--orangedim);color:var(--orange);border-radius:2px">${t}</span>`).join('')}</div>
-      </div>`).join('')+'</div>';
 }
 
 function tog(id){document.getElementById(id).classList.toggle('open')}
@@ -765,16 +675,10 @@ function showLoading(){
   document.getElementById('analyzeBtn').disabled=true;
   startHype();
 }
-function hideLoading(){
-  document.getElementById('loadingOverlay').classList.remove('on');
-  stopHype();
-  updateBtn();
-}
+function hideLoading(){document.getElementById('loadingOverlay').classList.remove('on');stopHype();updateBtn()}
 function showErr(msg){const b=document.getElementById('errbox');b.textContent='⚠ '+msg;b.classList.add('on')}
 function hideErr(){document.getElementById('errbox').classList.remove('on')}
-function loadSubjects(){}
 
-// ── INIT ──
 initQuotes();
 </script>
 </body>
