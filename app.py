@@ -31,14 +31,7 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-UNIVERSITY_DB = {
-    "mumbai_be": {
-        "name": "Mumbai University — BE",
-        "structure": "Q1 compulsory (4 parts × 5 marks = 20 marks). Q2-Q6 attempt any 3 (2 parts × 10 marks = 20 marks each). Total: 80 marks, 3 hours.",
-        "q1_marks": 5, "optional_marks": 10, "total_marks": 80, "duration": "3 hours",
-        "pattern": "Q1a/b/c/d = 5 marks each. Q2A/B through Q6A/B = 10 marks each."
-    }
-}
+PAPER_FORMAT = "Q1a/b/c/d = 5 marks each. Q2A/B through Q6A/B = 10 marks each. Total 80 marks, 3 hours."
 
 SUBJECT_TOPICS = {
     "spcc": [
@@ -78,13 +71,13 @@ SUBJECT_TOPICS = {
         "File system allocation directory structure",
         "Disk scheduling SSTF SCAN C-SCAN",
         "Process synchronization monitors",
-        "Thrashing working set",
-        "Inter process communication IPC"
+        "Five state process model suspended states",
+        "Resource Allocation Graph deadlock"
     ],
     "dbms": [
         "Normalization 1NF 2NF 3NF BCNF",
         "SQL queries joins",
-        "ER diagram",
+        "ER diagram entity relationship",
         "Transaction ACID properties",
         "Concurrency control",
         "Relational algebra",
@@ -92,38 +85,38 @@ SUBJECT_TOPICS = {
         "Recovery techniques"
     ],
     "cn": [
-        "OSI model layers",
-        "TCP IP protocol",
-        "Routing algorithms",
+        "OSI model seven layers",
+        "TCP IP protocol suite",
+        "Routing algorithms distance vector link state",
         "Congestion control",
-        "Error detection correction",
-        "Medium access control",
+        "Error detection correction CRC",
+        "Medium access control CSMA",
         "Socket programming",
-        "Network security"
+        "Network security cryptography"
     ],
     "dsa": [
-        "Sorting algorithms time complexity",
-        "Tree traversal BST",
-        "Graph BFS DFS",
+        "Sorting algorithms time complexity quicksort mergesort",
+        "Tree traversal BST binary",
+        "Graph BFS DFS traversal",
         "Dynamic programming",
-        "Hashing",
+        "Hashing collision",
         "Stack queue linked list",
         "Heap priority queue",
         "Divide and conquer"
     ],
     "ai": [
-        "Uninformed search BFS DFS Iterative Deepening",
-        "Informed search A* Best First Heuristic",
-        "Hill Climbing Simulated Annealing local search",
-        "Minimax Alpha Beta Pruning game tree",
-        "Constraint Satisfaction Problem CSP backtracking",
-        "Propositional Logic First Order Logic resolution",
-        "Bayesian Network probabilistic reasoning",
-        "Machine Learning supervised unsupervised",
-        "Neural Network perceptron backpropagation",
-        "Natural Language Processing",
-        "Planning STRIPS state space",
-        "Knowledge Representation frames semantic net"
+        "Hill Climbing algorithm local search problems",
+        "A star search heuristic informed uninformed",
+        "Alpha Beta pruning minimax game tree",
+        "Partial order planning hierarchical STRIPS",
+        "PEAS descriptors task environment agent",
+        "Forward chaining backward chaining inference",
+        "First Order Logic FOL resolution CNF",
+        "Genetic algorithms evolutionary computation",
+        "Reinforcement learning reward policy",
+        "Wumpus world environment",
+        "Learning agent architecture",
+        "Bayesian belief network probabilistic"
     ],
     "ml": [
         "Linear Regression Logistic Regression",
@@ -140,10 +133,7 @@ SUBJECT_TOPICS = {
     "general": ["Check every Q1-Q6 question in all papers for repeating topics"]
 }
 
-# ════════════════════════════════════════════════════
-# PDF LAYER — unchanged from original
-# ════════════════════════════════════════════════════
-
+# ── CLEAN PDF TEXT ──
 def clean_pdf_text(text):
     lines = text.split('\n')
     clean = []
@@ -153,7 +143,7 @@ def clean_pdf_text(text):
         if re.match(r'^[A-F0-9]{20,}$', line): continue
         if re.match(r'^([A-F0-9]{1,2}\s){6,}', line): continue
         hex_chars = len(re.findall(r'[A-F0-9]', line))
-        if len(line) > 20 and hex_chars / max(len(line.replace(' ','')), 1) > 0.75: continue
+        if len(line) > 20 and hex_chars / max(len(line.replace(' ', '')), 1) > 0.75: continue
         if re.match(r'^[*_\-=.]{5,}$', line): continue
         line = re.sub(r'([a-z])([A-Z])', r'\1 \2', line)
         line = re.sub(r'(Q\.?\s*\d+)\.?([A-Za-z])', r'\1. \2', line)
@@ -162,6 +152,7 @@ def clean_pdf_text(text):
         clean.append(line)
     return '\n'.join(clean)
 
+# ── PDF EXTRACTION ──
 def extract_text_from_pdf(pdf_path):
     text = ""
     try:
@@ -194,19 +185,16 @@ def extract_text_via_vision(pdf_path, groq_client):
         import fitz, base64
         from PIL import Image as PILImage
         import io as _io
-
         doc = fitz.open(pdf_path)
         page_images = []
         for page_num in range(min(len(doc), 4)):
             page = doc[page_num]
-            pix = page.get_pixmap(matrix=fitz.Matrix(120/72, 120/72))
+            pix = page.get_pixmap(matrix=fitz.Matrix(120 / 72, 120 / 72))
             img = PILImage.open(_io.BytesIO(pix.tobytes("png"))).convert('L')
             page_images.append(img)
         doc.close()
         gc.collect()
-
         if not page_images: return ""
-
         total_h = sum(img.height for img in page_images)
         max_w = max(img.width for img in page_images)
         stitched = PILImage.new('L', (max_w, total_h), 255)
@@ -214,13 +202,11 @@ def extract_text_via_vision(pdf_path, groq_client):
         for img in page_images:
             stitched.paste(img, (0, y))
             y += img.height
-
         buf = _io.BytesIO()
         stitched.save(buf, format='JPEG', quality=65, optimize=True)
         img_b64 = base64.b64encode(buf.getvalue()).decode()
         del stitched, page_images
         gc.collect()
-
         resp = groq_client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[{"role": "user", "content": [
@@ -234,10 +220,7 @@ def extract_text_via_vision(pdf_path, groq_client):
     except Exception:
         return ""
 
-# ════════════════════════════════════════════════════
-# QUESTION EXTRACTION — unchanged from original
-# ════════════════════════════════════════════════════
-
+# ── STEP 1: EXTRACT QUESTIONS AS JSON ──
 def extract_questions_as_json(paper_name, text, client):
     prompt = f"""Extract ALL exam questions from this paper as a JSON array.
 
@@ -257,7 +240,6 @@ Rules:
 - marks: 5 for Q1 parts, 10 for Q2-Q6, 0 if unclear
 - Extract exact question text
 - Return ONLY the JSON array, no markdown"""
-
     try:
         resp = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -278,10 +260,7 @@ Rules:
     except Exception:
         return []
 
-# ════════════════════════════════════════════════════
-# TF-IDF + CLUSTERING — unchanged from original
-# ════════════════════════════════════════════════════
-
+# ── STEP 2: TF-IDF CLUSTERING ──
 STOPWORDS = {
     'a','an','the','and','or','but','in','on','at','to','for','of','with',
     'is','are','was','were','be','been','have','has','had','do','does','did',
@@ -302,8 +281,8 @@ def cosine_sim(v1, v2):
     common = set(v1) & set(v2)
     if not common: return 0.0
     dot = sum(v1[k] * v2[k] for k in common)
-    m1 = math.sqrt(sum(x**2 for x in v1.values()))
-    m2 = math.sqrt(sum(x**2 for x in v2.values()))
+    m1 = math.sqrt(sum(x ** 2 for x in v1.values()))
+    m2 = math.sqrt(sum(x ** 2 for x in v2.values()))
     if m1 == 0 or m2 == 0: return 0.0
     return dot / (m1 * m2)
 
@@ -313,12 +292,12 @@ def build_tfidf(questions):
     df = Counter()
     for tokens in tokenized:
         for t in set(tokens): df[t] += 1
-    idf = {t: math.log((N+1)/(df[t]+1))+1 for t in df}
+    idf = {t: math.log((N + 1) / (df[t] + 1)) + 1 for t in df}
     vectors = []
     for tokens in tokenized:
         tf = Counter(tokens)
         total = max(len(tokens), 1)
-        vectors.append({t: (tf[t]/total)*idf.get(t,1) for t in tf})
+        vectors.append({t: (tf[t] / total) * idf.get(t, 1) for t in tf})
     return vectors
 
 def match_topic(question_text, topic_keywords):
@@ -358,7 +337,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
             if visited[i]: continue
             cluster = [unmatched[i]]
             visited[i] = True
-            for j in range(i+1, len(unmatched)):
+            for j in range(i + 1, len(unmatched)):
                 if visited[j]: continue
                 if i < len(unmatched_vectors) and j < len(unmatched_vectors):
                     sim = cosine_sim(unmatched_vectors[i], unmatched_vectors[j])
@@ -380,25 +359,19 @@ def cluster_questions_python(all_questions, subject, num_papers):
             paper = q['paper']
             if paper not in paper_best or len(q['question']) > len(paper_best[paper]['question']):
                 paper_best[paper] = q
-
         unique_questions = list(paper_best.values())
         papers = [q['paper'] for q in unique_questions]
         if len(papers) < 2: continue
-
         freq = len(papers)
         importance = 'HIGH' if freq >= 3 else 'MEDIUM' if freq == 2 else 'LOW'
         marks = [q.get('marks', 0) for q in unique_questions]
         marks_nonzero = [m for m in marks if m > 0]
         positions = [q.get('position', '') for q in unique_questions]
         q_nums = [re.match(r'Q\d+', p, re.I).group() if re.match(r'Q\d+', p, re.I) else p for p in positions]
-
         final_clusters.append({
-            'topic': topic,
-            'frequency': freq,
-            'importance': importance,
+            'topic': topic, 'frequency': freq, 'importance': importance,
             'questions': [q['question'] for q in unique_questions],
-            'papers': papers,
-            'question_positions': positions,
+            'papers': papers, 'question_positions': positions,
             'marks_each_time': marks_nonzero,
             'consistent_position': len(set(q_nums)) == 1 if len(q_nums) > 1 else False,
             'consistent_marks': len(set(marks_nonzero)) == 1 if len(marks_nonzero) > 1 else False,
@@ -406,382 +379,230 @@ def cluster_questions_python(all_questions, subject, num_papers):
         })
 
     final_clusters.sort(key=lambda x: (-x['frequency'], ['LOW','MEDIUM','HIGH'].index(x.get('importance','LOW'))))
-    return final_clusters[:15]
 
-# ════════════════════════════════════════════════════
-# GOD-LEVEL PREDICTION PIPELINE
-# ════════════════════════════════════════════════════
+    # Global dedup — same question position only in ONE cluster
+    seen_qids = set()
+    deduped = []
+    for cluster in final_clusters:
+        papers = cluster.get('papers', [])
+        positions = cluster.get('question_positions', [])
+        questions = cluster.get('questions', [])
+        marks = cluster.get('marks_each_time', [])
+        clean_idx = []
+        for i, paper in enumerate(papers):
+            qid = f"{paper}_{positions[i] if i < len(positions) else i}".lower()
+            if qid not in seen_qids:
+                seen_qids.add(qid)
+                clean_idx.append(i)
+        cluster['papers'] = [papers[i] for i in clean_idx if i < len(papers)]
+        cluster['question_positions'] = [positions[i] for i in clean_idx if i < len(positions)]
+        cluster['questions'] = [questions[i] for i in clean_idx if i < len(questions)]
+        cluster['marks_each_time'] = [marks[i] for i in clean_idx if i < len(marks)]
+        cluster['frequency'] = len(cluster['papers'])
+        if cluster['frequency'] < 2: continue
+        f = cluster['frequency']
+        cluster['importance'] = 'HIGH' if f >= 3 else 'MEDIUM' if f == 2 else 'LOW'
+        deduped.append(cluster)
 
-def extract_metadata(all_questions, sorted_paper_names):
-    """
-    METADATA EXTRACTION + ROTATION ANALYSIS
-    For each topic cluster, track:
-    - Which paper it appeared in (by index = recency)
-    - Gap since last appearance (rotation gap)
-    - Position stability
-    - Marks stability
-    - Recency weight (recent papers = higher weight)
-    """
-    meta = {}
-    n_papers = len(sorted_paper_names)
-    paper_index = {name: i for i, name in enumerate(sorted_paper_names)}  # 0=oldest
+    return deduped[:15]
 
-    for q in all_questions:
-        paper = q.get('paper', '')
-        idx = paper_index.get(paper, 0)
-        topic_tokens = tuple(sorted(tokenize(q['question'])[:5]))
+# ── STEP 3: GROQ ENRICHMENT ──
+# Returns: tips (applied to clusters) + predictions (10) + last_hour_prep (5 must-do)
+def enrich_with_groq(clusters, user_name, subject, client):
 
-        key = topic_tokens
-        if key not in meta:
-            meta[key] = {
-                'questions': [],
-                'paper_indices': [],
-                'positions': [],
-                'marks': [],
-                'papers': []
+    # Build fallback in case Groq fails — always works from clusters
+    def build_fallback():
+        preds = []
+        for c in clusters[:10]:
+            q = c['questions'][0] if c['questions'] else f"Explain {c['topic']} with suitable example."
+            preds.append({
+                "question": q,
+                "topic": c['topic'],
+                "confidence": c['importance'],
+                "reason": f"Appeared in {c['frequency']} papers",
+                "likely_position": c['question_positions'][0] if c['question_positions'] else "Q2A",
+                "likely_marks": c['marks_each_time'][0] if c['marks_each_time'] else 10,
+                "frequency": c['frequency']
+            })
+        must_do = []
+        for i, c in enumerate(clusters[:5]):
+            must_do.append({
+                "rank": i + 1,
+                "topic": c['topic'],
+                "question": c['questions'][0][:200] if c['questions'] else f"Explain {c['topic']}.",
+                "marks": c['marks_each_time'][0] if c['marks_each_time'] else 10,
+                "position": c['question_positions'][0] if c['question_positions'] else "",
+                "why": f"Appeared in {c['frequency']} papers",
+                "quick_tip": "Draw a neat labeled diagram. Cover all key components. Give one real example."
+            })
+        return {
+            'predictions': preds,
+            'last_hour_prep': {
+                'message': f"Stay calm and focused, {user_name}. You have prepared for this.",
+                'passing_strategy': "Attempt all of Q1 (20 marks) + any 2 questions from Q2-Q6 (40 marks) = 60 marks. That's passing.",
+                'must_do': must_do
             }
-        meta[key]['questions'].append(q['question'])
-        meta[key]['paper_indices'].append(idx)
-        meta[key]['positions'].append(q.get('position', ''))
-        meta[key]['marks'].append(q.get('marks', 0))
-        meta[key]['papers'].append(paper)
-
-    # Compute rotation gap and recency score per topic
-    scored = []
-    for key, data in meta.items():
-        indices = sorted(set(data['paper_indices']))
-        if len(indices) < 1: continue
-
-        last_seen = max(indices)
-        gap = (n_papers - 1) - last_seen  # papers since last seen
-        freq = len(indices)
-
-        # Recency weight: questions seen in latest paper = lower prediction priority
-        # questions with gap >= 1 = due again
-        recency_score = gap / max(n_papers - 1, 1)  # 0=very recent, 1=not seen in last paper
-
-        # Frequency score
-        freq_score = freq / max(n_papers, 1)
-
-        # Combined rotation score: high freq + gap of 1-2 papers = highest priority
-        if gap == 0:
-            rotation_score = freq_score * 0.4  # just appeared — less likely immediately again
-        elif gap == 1:
-            rotation_score = freq_score * 1.0 + 0.3  # due again
-        elif gap >= 2:
-            rotation_score = freq_score * 0.8 + 0.5  # overdue
-
-        scored.append({
-            'key': key,
-            'question_sample': data['questions'][0],
-            'freq': freq,
-            'gap': gap,
-            'last_seen': last_seen,
-            'rotation_score': rotation_score,
-            'positions': data['positions'],
-            'marks': [m for m in data['marks'] if m > 0],
-            'papers': data['papers']
-        })
-
-    scored.sort(key=lambda x: -x['rotation_score'])
-    return scored
-
-def build_prediction_brief(clusters, rotation_data, all_questions, sorted_paper_names, subject, university):
-    """
-    Build a rich, structured brief for Groq so it has EVERYTHING it needs
-    to generate god-level predictions — no guessing, no hallucination.
-    """
-    n = len(sorted_paper_names)
-    uni_info = UNIVERSITY_DB.get(university, UNIVERSITY_DB['mumbai_be'])
-
-    # 1. Cluster intelligence
-    cluster_intel = []
-    for c in clusters:
-        papers = c.get('papers', [])
-        positions = c.get('question_positions', [])
-        marks = c.get('marks_each_time', [])
-        questions = c.get('questions', [])
-
-        # Gap analysis
-        paper_set = set(papers)
-        gap = sum(1 for p in sorted_paper_names[-2:] if p not in paper_set)
-
-        cluster_intel.append({
-            'topic': c['topic'],
-            'freq': c['frequency'],
-            'importance': c['importance'],
-            'gap_recent': gap,  # how many of last 2 papers it was ABSENT from
-            'consistent_position': c.get('consistent_position', False),
-            'consistent_marks': c.get('consistent_marks', False),
-            'positions': positions,
-            'marks': marks,
-            'best_question': questions[0][:200] if questions else '',
-            'all_questions': [q[:150] for q in questions[:4]]
-        })
-
-    # 2. Full question history (all papers, all questions) for Groq context
-    history_lines = []
-    for paper in sorted_paper_names:
-        history_lines.append(f"\n=== {paper} ===")
-        paper_qs = [q for q in all_questions if q.get('paper') == paper]
-        for q in paper_qs:
-            history_lines.append(f"  {q.get('position','?')} [{q.get('marks',0)}m]: {q['question'][:130]}")
-
-    # 3. Top rotation candidates (topics due for repeat)
-    rotation_lines = []
-    for r in rotation_data[:12]:
-        pos_str = ', '.join(set(p for p in r['positions'] if p)) or '?'
-        marks_str = str(r['marks'][0]) if r['marks'] else '?'
-        rotation_lines.append(
-            f"  topic_tokens={list(r['key'])[:4]} | freq={r['freq']} | gap={r['gap']} papers | "
-            f"rotation_score={r['rotation_score']:.2f} | pos={pos_str} | marks={marks_str}m"
-        )
-
-    brief = f"""UNIVERSITY: {uni_info['name']}
-SUBJECT: {subject.upper()}
-PAPER FORMAT: {uni_info['pattern']}
-TOTAL PAPERS ANALYSED: {n}
-PAPER ORDER (oldest → newest): {' → '.join(sorted_paper_names)}
-
-━━ REPEAT CLUSTER INTELLIGENCE ━━
-{json.dumps(cluster_intel, indent=2)[:3500]}
-
-━━ ROTATION ANALYSIS (topics DUE for next exam) ━━
-Higher rotation_score = more likely to appear next.
-gap=1 means absent from last 1 paper = DUE. gap=0 = just appeared.
-{chr(10).join(rotation_lines)}
-
-━━ FULL QUESTION HISTORY (all papers) ━━
-{chr(10).join(history_lines)[:2500]}"""
-
-    return brief
-
-def generate_god_predictions(clusters, all_questions, sorted_paper_names,
-                              user_name, university, subject, client):
-    """
-    GOD-LEVEL PREDICTION ENGINE
-    Pipeline: Metadata → Rotation Analysis → Scoring → Groq Probability Ranking → Final 10
-    """
-    uni_info = UNIVERSITY_DB.get(university, UNIVERSITY_DB['mumbai_be'])
-
-    # Step A: Extract metadata + rotation scores (pure Python, deterministic)
-    rotation_data = extract_metadata(all_questions, sorted_paper_names)
-
-    # Step B: Build rich brief
-    brief = build_prediction_brief(
-        clusters, rotation_data, all_questions,
-        sorted_paper_names, subject, university
-    )
-
-    # Step C: Groq does final probability ranking + question generation
-    prompt = f"""You are an expert exam prediction engine for engineering students.
-
-{brief}
-
-━━ YOUR TASK ━━
-Using ALL the above intelligence, generate EXACTLY 10 exam predictions for the NEXT paper.
-
-PREDICTION RULES:
-1. HIGH confidence = topic appeared 3+ times OR rotation_score > 0.7 (gap=1, high freq)
-2. MEDIUM confidence = appeared 2 times OR rotation_score 0.4-0.7
-3. LOW confidence = appeared once but is a core syllabus topic not asked recently
-4. Prefer topics with gap >= 1 (absent from recent papers) — they are DUE
-5. Each prediction must be a COMPLETE, SPECIFIC question (not just a topic name)
-6. Use the exact style of questions from the history above
-7. Assign the most likely position (Q1a/b/c/d for 5m, Q2A-Q6B for 10m)
-8. Never predict a topic that appeared in ALL of the last 2 papers (too fresh)
-
-Return ONLY this JSON array (no markdown, no extra text):
-[
-  {{
-    "question": "full specific question text matching exam style",
-    "topic": "topic name from clusters",
-    "confidence": "HIGH",
-    "likely_position": "Q2A",
-    "likely_marks": 10,
-    "frequency": 3,
-    "gap": 1,
-    "rotation_score": 0.85,
-    "reason": "Appeared 3x, absent last paper, always Q2 position — highly due"
-  }}
-]
-
-Generate exactly 10 predictions. Sort by rotation_score descending. Return ONLY the JSON array."""
-
-    try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "You are an exam prediction engine. Output valid JSON array only. No markdown. Exactly 10 items."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.15,
-            max_tokens=3000
-        )
-        raw = resp.choices[0].message.content.strip()
-        raw = re.sub(r'^```(?:json)?\n?', '', raw)
-        raw = re.sub(r'\n?```$', '', raw).strip()
-
-        # Handle both array and object responses
-        if raw.startswith('{'):
-            parsed = json.loads(raw)
-            predictions = parsed.get('predictions', parsed.get('items', []))
-        else:
-            predictions = json.loads(raw)
-
-        # Validate each prediction has required fields
-        clean = []
-        for p in predictions:
-            if not isinstance(p, dict): continue
-            if not p.get('question') or not p.get('topic'): continue
-            clean.append({
-                'question':        str(p.get('question', '')),
-                'topic':           str(p.get('topic', '')),
-                'confidence':      str(p.get('confidence', 'MEDIUM')),
-                'likely_position': str(p.get('likely_position', 'Q2A')),
-                'likely_marks':    int(p.get('likely_marks', 10)),
-                'frequency':       int(p.get('frequency', 1)),
-                'gap':             int(p.get('gap', 0)),
-                'rotation_score':  float(p.get('rotation_score', 0.5)),
-                'reason':          str(p.get('reason', ''))
-            })
-        predictions = clean
-
-    except Exception:
-        predictions = []
-
-    # Step D: ALWAYS guarantee 10 predictions — fallback from rotation data + clusters
-    if len(predictions) < 10:
-        used_topics = {p['topic'] for p in predictions}
-
-        # First try rotation data
-        for r in rotation_data:
-            if len(predictions) >= 10: break
-            topic_guess = ' '.join(w.capitalize() for w in list(r['key'])[:4])
-            if topic_guess in used_topics: continue
-            pos = next((p for p in r['positions'] if p), 'Q2A')
-            marks = r['marks'][0] if r['marks'] else 10
-            conf = 'HIGH' if r['rotation_score'] > 0.7 else 'MEDIUM' if r['rotation_score'] > 0.4 else 'LOW'
-            predictions.append({
-                'question':        r['question_sample'],
-                'topic':           topic_guess,
-                'confidence':      conf,
-                'likely_position': pos,
-                'likely_marks':    marks,
-                'frequency':       r['freq'],
-                'gap':             r['gap'],
-                'rotation_score':  round(r['rotation_score'], 2),
-                'reason':          f"Rotation analysis: freq={r['freq']}, gap={r['gap']} papers"
-            })
-            used_topics.add(topic_guess)
-
-        # Then pad from clusters
-        for c in clusters:
-            if len(predictions) >= 10: break
-            if c['topic'] in used_topics: continue
-            pos = c['question_positions'][0] if c.get('question_positions') else 'Q2A'
-            marks = c['marks_each_time'][0] if c.get('marks_each_time') else 10
-            predictions.append({
-                'question':        c['questions'][0] if c.get('questions') else c['topic'],
-                'topic':           c['topic'],
-                'confidence':      c.get('importance', 'MEDIUM'),
-                'likely_position': pos,
-                'likely_marks':    marks,
-                'frequency':       c['frequency'],
-                'gap':             0,
-                'rotation_score':  0.3,
-                'reason':          f"Appeared {c['frequency']} times across papers"
-            })
-            used_topics.add(c['topic'])
-
-    # Final sort by rotation_score desc
-    predictions.sort(key=lambda x: -x.get('rotation_score', 0))
-    return predictions[:10]
-
-# ════════════════════════════════════════════════════
-# ENRICH — tips + study plan (separate from predictions now)
-# ════════════════════════════════════════════════════
-
-def enrich_with_groq(clusters, user_name, university, subject, client):
-    uni_info = UNIVERSITY_DB.get(university, UNIVERSITY_DB['mumbai_be'])
+        }
 
     cluster_summary = json.dumps([{
         'topic': c['topic'],
         'frequency': c['frequency'],
         'importance': c['importance'],
         'papers': c['papers'],
-        'sample_question': c['questions'][0][:150] if c['questions'] else ''
-    } for c in clusters], indent=2)[:5000]
+        'sample_question': c['questions'][0][:200] if c['questions'] else '',
+        'typical_marks': c['marks_each_time'][0] if c['marks_each_time'] else 10,
+        'position': c['question_positions'][0] if c['question_positions'] else ''
+    } for c in clusters], indent=2)[:6000]
 
-    prompt = f"""You are an exam tip generator for {uni_info['name']} {subject.upper()} students.
+    prompt = f"""You are an exam intelligence engine for {subject.upper()} engineering students.
 Student: {user_name}
 
-Repeat topics identified:
+These are CONFIRMED repeat topics from past papers (do NOT change frequencies):
 {cluster_summary}
 
-Return ONLY this JSON:
+Return ONLY this JSON — start with {{ end with }} — no markdown no explanation:
 {{
   "tips": {{
-    "topic_name": {{"tip": "practical exam tip", "pattern_note": "pattern observation"}}
+    "EXACT_TOPIC_NAME_FROM_ABOVE": {{
+      "tip": "specific practical tip for answering this in the exam",
+      "pattern_note": "when and where this appears in the paper"
+    }}
   }},
-  "paper_pattern": {{
-    "compulsory_question": "{uni_info['pattern']}",
-    "optional_questions": "Q2-Q6 attempt any 3, Part A and B 10 marks each",
-    "total_marks": {uni_info['total_marks']},
-    "duration": "{uni_info['duration']}",
-    "key_insight": "key insight for {subject.upper()}"
-  }},
-  "study_plan": {{
-    "strategy": "2-3 sentence strategy for {user_name}",
-    "days": [
-      {{"day":1,"focus":"topic","priority":"HIGH","hours":3,"tasks":["task1","task2","task3"]}},
-      {{"day":2,"focus":"topic","priority":"HIGH","hours":3,"tasks":["task1","task2","task3"]}},
-      {{"day":3,"focus":"topic","priority":"HIGH","hours":3,"tasks":["task1","task2","task3"]}},
-      {{"day":4,"focus":"topic","priority":"MEDIUM","hours":2,"tasks":["task1","task2","task3"]}},
-      {{"day":5,"focus":"topic","priority":"MEDIUM","hours":2,"tasks":["task1","task2","task3"]}},
-      {{"day":6,"focus":"topic","priority":"LOW","hours":2,"tasks":["task1","task2"]}},
-      {{"day":7,"focus":"Full Revision + Mock Test","priority":"HIGH","hours":4,"tasks":["Revise all HIGH topics","Timed mock","Review weak areas","Quick reference sheet"]}}
-    ],
-    "golden_topics": ["topic1","topic2","topic3"],
-    "dont_skip": ["topic1","topic2"]
+  "predictions": [
+    {{
+      "question": "Complete specific exam question text — write it like an actual exam question not a topic name",
+      "topic": "topic name from clusters",
+      "confidence": "HIGH",
+      "reason": "Appeared in X of Y papers, always Z marks",
+      "likely_position": "Q2A",
+      "likely_marks": 10,
+      "frequency": 3
+    }}
+  ],
+  "last_hour_prep": {{
+    "message": "One short genuine motivational line for {user_name} — not generic",
+    "passing_strategy": "Attempt all of Q1 (20 marks) + any 2 from Q2-Q6 (40 marks) = 60 marks minimum passing",
+    "must_do": [
+      {{
+        "rank": 1,
+        "topic": "topic name",
+        "question": "exact most likely question — copy or rephrase from sample_question",
+        "marks": 10,
+        "position": "Q2A",
+        "why": "Appeared in X/Y papers always same marks",
+        "quick_tip": "Name exactly what to include: draw diagram with X Y Z labels, mention A B C concepts"
+      }}
+    ]
   }}
 }}
 
-days: exactly 7. Return ONLY JSON."""
+RULES — strictly follow:
+- predictions: EXACTLY 10 items. Each must be a real exam question, not just a topic name.
+- last_hour_prep.must_do: EXACTLY 5 items — top 5 highest frequency topics only.
+- quick_tip: be specific — name actual concepts, diagram labels, algorithms to mention.
+- Return ONLY valid JSON. Nothing before {{. Nothing after }}."""
 
-    try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "Exam tip generator. Return valid JSON only. No markdown."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            max_tokens=2500
-        )
-        raw = resp.choices[0].message.content.strip()
-        raw = re.sub(r'^```(?:json)?\n?', '', raw)
-        raw = re.sub(r'\n?```$', '', raw).strip()
-        enrichment = json.loads(raw)
+    for attempt in range(3):
+        try:
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=3500
+            )
+            raw = resp.choices[0].message.content.strip()
+            raw = re.sub(r'^```(?:json)?\s*', '', raw)
+            raw = re.sub(r'\s*```$', '', raw)
+            start = raw.find('{')
+            end = raw.rfind('}')
+            if start == -1 or end == -1 or end <= start:
+                raise ValueError("No JSON object found")
+            raw = raw[start:end + 1]
+            enrichment = json.loads(raw)
 
-        tips_map = enrichment.get('tips', {})
-        for c in clusters:
-            topic = c['topic']
-            if topic in tips_map:
-                c['tip'] = tips_map[topic].get('tip', '')
-                c['pattern_note'] = tips_map[topic].get('pattern_note', '')
-            elif not c.get('tip'):
-                c['tip'] = f"Review all past questions on {topic} — appears consistently across papers."
+            # Apply tips to clusters
+            tips_map = enrichment.get('tips', {})
+            for c in clusters:
+                if c['topic'] in tips_map:
+                    c['tip'] = tips_map[c['topic']].get('tip', '')
+                    c['pattern_note'] = tips_map[c['topic']].get('pattern_note', '')
+                if not c.get('tip'):
+                    c['tip'] = f"Review all past questions on this topic — appears consistently across papers."
 
-        return enrichment
-    except Exception:
-        return {
-            'paper_pattern': {},
-            'study_plan': {
-                'strategy': f'Focus on HIGH priority topics for {subject.upper()}.',
-                'days': [], 'golden_topics': [], 'dont_skip': []
-            }
-        }
+            # ── FIX: validate predictions — never return empty ──
+            predictions = enrichment.get('predictions', [])
+            if not isinstance(predictions, list) or len(predictions) == 0:
+                predictions = build_fallback()['predictions']
+            # Ensure each prediction has all required fields
+            cleaned_preds = []
+            for p in predictions:
+                if not isinstance(p, dict): continue
+                q = p.get('question', '')
+                if not q or len(q) < 10:
+                    q = p.get('topic', 'Review this topic') + ' — explain with suitable example and diagram.'
+                cleaned_preds.append({
+                    'question': q,
+                    'topic': str(p.get('topic', '')),
+                    'confidence': str(p.get('confidence', 'MEDIUM')),
+                    'reason': str(p.get('reason', f"Appeared in {p.get('frequency', 2)} papers")),
+                    'likely_position': str(p.get('likely_position', 'Q2A')),
+                    'likely_marks': int(p.get('likely_marks', 10)),
+                    'frequency': int(p.get('frequency', 2))
+                })
+            enrichment['predictions'] = cleaned_preds if cleaned_preds else build_fallback()['predictions']
+
+            # ── FIX: validate last_hour_prep — never return empty ──
+            lhp = enrichment.get('last_hour_prep', {})
+            if not isinstance(lhp, dict) or not lhp.get('must_do'):
+                lhp = build_fallback()['last_hour_prep']
+            else:
+                cleaned_must_do = []
+                for i, q in enumerate(lhp.get('must_do', [])):
+                    if not isinstance(q, dict): continue
+                    question = q.get('question', '')
+                    if not question or len(question) < 10:
+                        question = clusters[i]['questions'][0][:200] if i < len(clusters) and clusters[i]['questions'] else f"Explain {q.get('topic', '')}."
+                    cleaned_must_do.append({
+                        'rank': int(q.get('rank', i + 1)),
+                        'topic': str(q.get('topic', '')),
+                        'question': question,
+                        'marks': int(q.get('marks', 10)),
+                        'position': str(q.get('position', '')),
+                        'why': str(q.get('why', 'Appears frequently in past papers')),
+                        'quick_tip': str(q.get('quick_tip', 'Draw a neat diagram, cover all key components, give one example.'))
+                    })
+                lhp['must_do'] = cleaned_must_do if cleaned_must_do else build_fallback()['last_hour_prep']['must_do']
+                if not lhp.get('message'):
+                    lhp['message'] = f"Stay calm, {user_name}. You have prepared for this."
+                if not lhp.get('passing_strategy'):
+                    lhp['passing_strategy'] = "Attempt all of Q1 (20 marks) + any 2 from Q2-Q6 (40 marks) = 60 marks minimum."
+            enrichment['last_hour_prep'] = lhp
+
+            return enrichment
+
+        except (json.JSONDecodeError, ValueError):
+            if attempt < 2:
+                time.sleep(5)
+                continue
+            break
+        except Exception as e:
+            err = str(e).lower()
+            if 'rate' in err or '429' in err:
+                if attempt < 2:
+                    time.sleep(20)
+                    continue
+                raise Exception('AI rate limit. Wait 1 minute and try again.')
+            raise e
+
+    # All attempts failed — full Python fallback
+    for c in clusters:
+        if not c.get('tip'):
+            c['tip'] = "Review all past questions on this topic — appears consistently across papers."
+    return build_fallback()
+
 
 def parse_paper_name(filename):
     MONTH_MAP = {
@@ -790,40 +611,20 @@ def parse_paper_name(filename):
         'jul':('July',7),'aug':('August',8),'sep':('September',9),
         'oct':('October',10),'nov':('November',11),'dec':('December',12)
     }
-    parts = filename.lower().replace('-','_').split('_')
+    parts = filename.lower().replace('-', '_').split('_')
     year = next((int(p) for p in parts if re.match(r'20\d\d$', p)), None)
     mk = next((p[:3] for p in parts if p[:3] in MONTH_MAP), None)
-    mn, mnum = MONTH_MAP.get(mk, ('',0))
-    sk = year*100+mnum if year else 0
+    mn, mnum = MONTH_MAP.get(mk, ('', 0))
+    sk = year * 100 + mnum if year else 0
     if year and mn: disp = f"{mn}_{year}"
     elif year: disp = f"Paper_{year}"
     else: disp = f"Paper_{filename[:10]}"
     return disp, sk
 
-# ════════════════════════════════════════════════════
-# ROUTES
-# ════════════════════════════════════════════════════
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
-@app.route('/universities', methods=['GET'])
-def get_universities():
-    return jsonify({
-        'universities': [{'id': 'mumbai_be', 'name': 'Mumbai University — BE/BTech'}],
-        'subjects': {
-            'mumbai_be': [
-                {'id': 'spcc', 'name': 'System Programming & Compiler Construction'},
-                {'id': 'dbms', 'name': 'Database Management Systems'},
-                {'id': 'os', 'name': 'Operating Systems'},
-                {'id': 'cn', 'name': 'Computer Networks'},
-                {'id': 'mc', 'name': 'Mobile Computing'},
-                {'id': 'dsa', 'name': 'Data Structures & Algorithms'},
-                {'id': 'general', 'name': 'Other Subject'}
-            ]
-        }
-    })
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -838,9 +639,9 @@ def analyze():
     if non_pdf:
         return jsonify({'error': f'Only PDFs supported. Remove: {", ".join(non_pdf)}'}), 400
 
-    user_name  = request.form.get('user_name', 'Student').strip() or 'Student'
-    university = request.form.get('university', 'mumbai_be').strip()
-    subject    = request.form.get('subject', 'general').strip()
+    user_name = request.form.get('user_name', 'Student').strip() or 'Student'
+    user_name = re.sub(r'[^a-zA-Z0-9 ]', '', user_name)[:30]
+    subject = request.form.get('subject', 'general').strip()
 
     if not os.environ.get('GROQ_API_KEY'):
         return jsonify({'error': 'Service not configured.'}), 500
@@ -854,19 +655,17 @@ def analyze():
 
     client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
     all_papers_text = {}
-    paper_stats     = {}
-    ocr_used        = []
+    paper_stats = {}
+    ocr_used = []
 
     try:
-        # ── Step 1: PDF extraction (original — unchanged) ──
         for file in files:
             if not (file and file.filename.lower().endswith('.pdf')): continue
-            filename   = secure_filename(file.filename)
+            filename = secure_filename(file.filename)
             paper_name, sort_key = parse_paper_name(filename)
             base = paper_name; c = 1
             while paper_name in all_papers_text:
                 paper_name = f"{base}_{c}"; c += 1
-
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             try:
@@ -877,12 +676,10 @@ def analyze():
                         text = vt
                         ocr_used.append(paper_name)
                     elif not text or len(text.strip()) < 50:
-                        return jsonify({'error': f'Cannot read "{filename}". Convert at smallpdf.com → OCR PDF → re-upload.'}), 400
+                        return jsonify({'error': f'Cannot read "{filename}". Convert at smallpdf.com and re-upload.'}), 400
                 all_papers_text[paper_name] = (text, sort_key)
                 with pdfplumber.open(filepath) as pdf:
-                    paper_stats[paper_name] = {
-                        'pages': len(pdf.pages), 'chars': len(text), 'ocr': paper_name in ocr_used
-                    }
+                    paper_stats[paper_name] = {'pages': len(pdf.pages), 'chars': len(text), 'ocr': paper_name in ocr_used}
             except Exception as e:
                 return jsonify({'error': f'Failed: "{filename}": {str(e)}'}), 500
             finally:
@@ -892,11 +689,8 @@ def analyze():
         if len(all_papers_text) < 2:
             return jsonify({'error': 'Need at least 2 readable papers.'}), 400
 
-        # ── Step 2: Extract questions — sorted oldest→newest for rotation analysis ──
-        all_questions   = []
-        sorted_papers   = sorted(all_papers_text.items(), key=lambda x: x[1][1])  # oldest first
-        sorted_paper_names = [name for name, _ in sorted_papers]
-
+        all_questions = []
+        sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
         for paper_name, (text, _) in sorted_papers:
             questions = extract_questions_as_json(paper_name, clean_pdf_text(text), client)
             if questions:
@@ -905,26 +699,22 @@ def analyze():
                 lines = clean_pdf_text(text).split('\n')
                 for line in lines:
                     if re.search(r'Q\d+|explain|describe|define', line, re.I) and len(line) > 20:
-                        all_questions.append({
-                            'id': f"{paper_name}_{len(all_questions)}",
-                            'paper': paper_name, 'position': '', 'marks': 0, 'question': line[:300]
-                        })
+                        all_questions.append({'id': f"{paper_name}_{len(all_questions)}", 'paper': paper_name, 'position': '', 'marks': 0, 'question': line[:300]})
             time.sleep(1)
             gc.collect()
 
-        # ── Step 3: Clustering (original — unchanged) ──
         clusters = cluster_questions_python(all_questions, subject, len(all_papers_text))
+        enrichment = enrich_with_groq(clusters, user_name, subject, client)
 
-        # ── Step 4: God-level predictions (new pipeline) ──
-        predictions = generate_god_predictions(
-            clusters, all_questions, sorted_paper_names,
-            user_name, university, subject, client
-        )
+        # ── GUARANTEED: predictions and last_hour_prep always present ──
+        predictions = enrichment.get('predictions', [])
+        last_hour_prep = enrichment.get('last_hour_prep', {})
 
-        # ── Step 5: Tips + study plan (separate Groq call) ──
-        enrichment   = enrich_with_groq(clusters, user_name, university, subject, client)
-        study_plan   = enrichment.get('study_plan', {})
-        paper_pattern= enrichment.get('paper_pattern', {})
+        # Final safety net
+        if not predictions:
+            predictions = [{'question': c['questions'][0] if c['questions'] else c['topic'], 'topic': c['topic'], 'confidence': c['importance'], 'reason': f"Appeared {c['frequency']} times", 'likely_position': c['question_positions'][0] if c['question_positions'] else 'Q2A', 'likely_marks': c['marks_each_time'][0] if c['marks_each_time'] else 10, 'frequency': c['frequency']} for c in clusters[:10]]
+        if not last_hour_prep.get('must_do'):
+            last_hour_prep = {'message': f"Stay focused, {user_name}.", 'passing_strategy': "Attempt Q1 (20m) + any 2 from Q2-Q6 (40m) = 60m minimum.", 'must_do': [{'rank': i+1, 'topic': c['topic'], 'question': c['questions'][0][:200] if c['questions'] else c['topic'], 'marks': c['marks_each_time'][0] if c['marks_each_time'] else 10, 'position': c['question_positions'][0] if c['question_positions'] else '', 'why': f"Appeared {c['frequency']} times", 'quick_tip': 'Draw diagram, cover all components, give example.'} for i, c in enumerate(clusters[:5])]}
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -933,135 +723,88 @@ def analyze():
         _analysis_lock.release()
 
     return jsonify({
-        'clusters':      clusters,
-        'predictions':   predictions,
-        'study_plan':    study_plan,
-        'paper_pattern': paper_pattern,
-        'user_name':     user_name,
-        'ocr_used':      ocr_used,
-        'university':    UNIVERSITY_DB.get(university, {}).get('name', ''),
-        'subject':       subject.upper(),
+        'clusters': clusters,
+        'predictions': predictions,
+        'last_hour_prep': last_hour_prep,
+        'user_name': user_name,
+        'subject': subject.upper(),
+        'ocr_used': ocr_used,
         'stats': {
-            'papers':          len(all_papers_text),
+            'papers': len(all_papers_text),
             'total_questions': len(all_questions),
-            'clusters':        len(clusters),
-            'high_priority':   len([c for c in clusters if c.get('importance') == 'HIGH']),
-            'paper_stats':     paper_stats
+            'clusters': len(clusters),
+            'high_priority': len([c for c in clusters if c.get('importance') == 'HIGH']),
+            'paper_stats': paper_stats
         }
     })
 
 
-# ── EXPORT — structured format ──
 @app.route('/export', methods=['POST'])
 def export_results():
-    data          = request.json
-    clusters      = data.get('clusters', [])
-    predictions   = data.get('predictions', [])
-    study_plan    = data.get('study_plan', {})
-    paper_pattern = data.get('paper_pattern', {})
-    stats         = data.get('stats', {})
-    user_name     = data.get('user_name', 'Student')
-    university    = data.get('university', '')
-    subject       = data.get('subject', '')
-    today         = datetime.now().strftime('%Y%m%d')
-
+    data = request.json
+    clusters = data.get('clusters', [])
+    predictions = data.get('predictions', [])
+    last_hour_prep = data.get('last_hour_prep', {})
+    stats = data.get('stats', {})
+    user_name = data.get('user_name', 'Student')
+    subject = data.get('subject', '')
+    today = datetime.now().strftime('%Y%m%d')
     D = "━" * 52
-
-    def section(title):
-        return ["", D, title, D]
 
     lines = [
         "╔══════════════════════════════════════════════════╗",
         "║           ASHLYSIS — EXAM INTELLIGENCE           ║",
-        "╚══════════════════════════════════════════════════╝",
-        "",
-        f"Student    : {user_name}",
-        f"University : {university}",
-        f"Subject    : {subject}",
-        f"Date       : {datetime.now().strftime('%d %b %Y %I:%M %p')}",
-        f"Papers     : {stats.get('papers', 0)}",
-        f"Questions  : {stats.get('total_questions', 0)}",
-        f"Clusters   : {stats.get('clusters', 0)}",
-        f"HIGH       : {stats.get('high_priority', 0)}",
-        f"Predictions: {len(predictions)}",
+        "╚══════════════════════════════════════════════════╝", "",
+        f"Student  : {user_name}",
+        f"Subject  : {subject}",
+        f"Date     : {datetime.now().strftime('%d %b %Y %I:%M %p')}",
+        f"Papers   : {stats.get('papers', 0)}",
+        f"Clusters : {stats.get('clusters', 0)}",
+        f"HIGH     : {stats.get('high_priority', 0)}",
     ]
 
-    if paper_pattern:
-        lines += section("PAPER PATTERN")
-        lines += [
-            f"Q1    : {paper_pattern.get('compulsory_question', '')}",
-            f"Q2-Q6 : {paper_pattern.get('optional_questions', '')}",
-            f"Marks : {paper_pattern.get('total_marks', 80)} | {paper_pattern.get('duration', '3 hours')}",
-            f"Tip   : {paper_pattern.get('key_insight', '')}",
-        ]
-
-    # ── MOST REPEATED QUESTIONS (AI-ready) ──
-    lines += section("MOST REPEATED QUESTIONS")
-    lines += [
-        "Paste into ChatGPT / Claude for full answers:",
-        "",
-        f"I am a {university} student studying {subject}.",
-        "Please answer these frequently-repeated exam questions:",
-        "",
-    ]
+    lines += ["", D, "REPEATING QUESTIONS", D]
     for i, c in enumerate(clusters, 1):
-        best_q = c.get('questions', [''])[0]
-        m_str  = f"[{c['marks_each_time'][0]}m]" if c.get('marks_each_time') else ""
-        p_str  = f"[{c['question_positions'][0]}]" if c.get('question_positions') else ""
-        lines.append(f"{i}. {best_q.strip()} {m_str} {p_str}".rstrip())
-    lines += ["", f"({len(clusters)} repeated questions from {stats.get('papers', 0)} papers)"]
-
-    # ── PATTERN ANALYSIS ──
-    lines += section("PATTERN ANALYSIS")
-    for i, c in enumerate(clusters, 1):
-        pos     = c.get('question_positions', [])
-        marks   = c.get('marks_each_time', [])
-        con_pos = "  ✓ ALWAYS SAME" if c.get('consistent_position') else ""
-        con_mrk = "  ✓ ALWAYS SAME" if c.get('consistent_marks') else ""
+        pos = c.get('question_positions', [])
+        marks = c.get('marks_each_time', [])
         lines += [
-            "",
-            f"{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
-            f"   Papers  : {', '.join(c.get('papers', []))}",
-            f"   Pos     : {', '.join(str(p) for p in pos)}{con_pos}",
-            f"   Marks   : {', '.join(str(m) for m in marks)}{con_mrk}",
-            f"   Pattern : {c.get('pattern_note', '')}",
-            f"   Tip     : {c.get('tip', '')}",
+            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
+            f"   Papers : {', '.join(c.get('papers', []))}",
+            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
+            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
+            f"   Pattern: {c.get('pattern_note', '')}",
+            f"   Tip    : {c.get('tip', '')}",
         ]
         for q in c.get('questions', [])[:4]:
             lines.append(f"   • {q[:200]}")
 
-    # ── GOD-LEVEL PREDICTIONS ──
-    lines += section("PREDICTED QUESTIONS FOR NEXT EXAM")
-    lines += ["Ranked by rotation score — highest probability first", ""]
+    lines += ["", D, "PREDICTED QUESTIONS", D]
     for i, p in enumerate(predictions, 1):
-        rot = f" | rotation={p.get('rotation_score', 0):.2f}" if p.get('rotation_score') else ""
-        gap = f" | gap={p.get('gap', '?')} papers" if 'gap' in p else ""
         lines += [
-            f"{i}. [{p.get('confidence')}] {p.get('question', '')[:200]}",
-            f"   Pos: {p.get('likely_position','?')} | Marks: {p.get('likely_marks','?')}m | Seen: {p.get('frequency','?')}×{gap}{rot}",
-            f"   Why: {p.get('reason', '')}",
-            "",
+            f"\n{i}. [{p.get('confidence')}] {p.get('question', '')[:200]}",
+            f"   Pos: {p.get('likely_position', '?')} | Marks: {p.get('likely_marks', '?')} | {p.get('reason', '')}"
         ]
 
-    # ── 7-DAY STUDY PLAN ──
-    lines += section("7-DAY STUDY PLAN")
-    if study_plan:
+    lines += ["", D, "LAST HOUR PREP — MINIMUM PASSING (40%)", D]
+    if last_hour_prep:
         lines += [
-            f"Strategy      : {study_plan.get('strategy', '')}",
-            f"Golden Topics : {', '.join(study_plan.get('golden_topics', []))}",
-            f"Never Skip    : {', '.join(study_plan.get('dont_skip', []))}",
+            f"\n{last_hour_prep.get('message', '')}",
+            f"\nStrategy: {last_hour_prep.get('passing_strategy', '')}",
+            "\nMUST DO — 5 questions:"
         ]
-        for day in study_plan.get('days', []):
-            lines += ["", f"Day {day['day']} [{day['priority']}] — {day['focus']} ({day['hours']}hrs)"]
-            for t in day.get('tasks', []):
-                lines.append(f"  ✓ {t}")
+        for q in last_hour_prep.get('must_do', []):
+            lines += [
+                f"\n{q.get('rank')}. {q.get('topic')} [{q.get('marks', 10)}m] — {q.get('position', '')}",
+                f"   Q: {q.get('question', '')[:200]}",
+                f"   Why: {q.get('why', '')}",
+                f"   Include: {q.get('quick_tip', '')}"
+            ]
 
-    lines += ["", D, f"ASHLYSIS — {user_name} · {subject} · {datetime.now().strftime('%d %b %Y')}", D]
-
+    lines += ["", D, f"ASHLYSIS — generated for {user_name}", D]
     buf = io.BytesIO("\n".join(lines).encode('utf-8'))
     buf.seek(0)
     return send_file(buf, mimetype='text/plain', as_attachment=True,
-                     download_name=f'ashlysis_{user_name.replace(" ","_")}_{subject}_{today}.txt')
+                     download_name=f'ashlysis_{user_name.replace(" ", "_")}_{subject}_{today}.txt')
 
 
 if __name__ == '__main__':
