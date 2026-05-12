@@ -220,6 +220,59 @@ select:focus{border-color:var(--orange)}
 .lhp-marks{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--bluedim);color:var(--blue)}
 .lhp-tip{display:flex;gap:8px;align-items:flex-start;background:var(--orangedim);border:1px solid rgba(255,92,0,0.18);border-radius:0 0 6px 6px;padding:10px 16px;font-size:12px;line-height:1.6;color:var(--orange2)}
 
+/* PAPER STRATEGY */
+.strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.strat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;position:relative;overflow:hidden}
+.strat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.strat-card.blue::before{background:linear-gradient(90deg,var(--blue),var(--purple))}
+.strat-card.orange::before{background:linear-gradient(90deg,var(--orange),var(--yellow))}
+.strat-card.green::before{background:linear-gradient(90deg,var(--green),var(--blue))}
+.strat-card.red::before{background:linear-gradient(90deg,var(--red),var(--orange))}
+.strat-card.full{grid-column:1/-1}
+.strat-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.strat-title .icon{font-size:16px}
+
+/* donut chart */
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut{position:relative;width:90px;height:90px;flex-shrink:0}
+.donut svg{transform:rotate(-90deg)}
+.donut-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-pct{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1}
+.donut-sub{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase}
+.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1}
+.dleg{display:flex;align-items:center;gap:8px;font-size:12px}
+.dleg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dleg-label{font-size:11px;color:var(--mutedbr)}
+.dleg-count{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-left:auto}
+
+/* time bar */
+.time-bars{display:flex;flex-direction:column;gap:8px}
+.tbar-row{display:flex;align-items:center;gap:10px}
+.tbar-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);min-width:80px;text-transform:uppercase}
+.tbar-track{flex:1;height:8px;background:var(--border);border-radius:99px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:99px;transition:width 0.6s ease}
+.tbar-val{font-family:'JetBrains Mono',monospace;font-size:10px;min-width:36px;text-align:right}
+
+/* strategy pills */
+.strat-text{font-size:12px;color:var(--mutedbr);line-height:1.75}
+.strat-highlight{display:inline-block;padding:2px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;margin:2px 2px}
+.sh-green{background:var(--greendim);color:var(--green)}
+.sh-red{background:var(--reddim);color:var(--red)}
+.sh-orange{background:var(--orangedim);color:var(--orange)}
+.sh-blue{background:var(--bluedim);color:var(--blue)}
+.sh-yellow{background:var(--yellowdim);color:var(--yellow)}
+
+/* attempt order */
+.attempt-steps{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.astep{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:12px}
+.astep-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--orange);min-width:24px}
+.astep-content{flex:1}
+.astep-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:6px}
+
+/* topic type badges */
+.type-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.type-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid}
+
 .reset-wrap{text-align:center;margin-top:36px}
 .reset-btn{padding:9px 22px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s}.reset-btn:hover{color:var(--text);border-color:var(--borderhi)}
 
@@ -371,10 +424,11 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
 
   <div class="stat-strip" id="statStrip"></div>
 
-  <!-- TABS: Repeats | Predictions | Last Hour Prep -->
+  <!-- TABS -->
   <div class="tabs-wrap">
     <button class="tab active" onclick="switchTab('repeats',this)">🔁 REPEATS <span class="tab-badge" id="tb1">0</span></button>
     <button class="tab" onclick="switchTab('predictions',this)">🔮 PREDICTIONS <span class="tab-badge" id="tb2">0</span></button>
+    <button class="tab" onclick="switchTab('strategy',this)">📊 PAPER STRATEGY</button>
     <button class="tab" onclick="switchTab('lasthour',this)" style="color:var(--red)">⚡ LAST HOUR PREP</button>
   </div>
 
@@ -387,6 +441,10 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
       ⚡ Predicted based on repeat frequency and rotation patterns. Includes likely question position and marks.
     </div>
     <div class="pred-grid" id="predList"></div>
+  </div>
+
+  <div class="tab-panel" id="panel-strategy">
+    <div id="strategyContent"></div>
   </div>
 
   <div class="tab-panel" id="panel-lasthour">
@@ -547,13 +605,12 @@ async function startAnalysis(){
 
 // ── SHOW RESULTS ──
 function showResults(data){
-  const{clusters,predictions,last_hour_prep,stats,user_name,subject,ocr_used}=data;
+  const{clusters,predictions,last_hour_prep,paper_strategy,stats,user_name,subject,ocr_used}=data;
 
   document.getElementById('resultsGreeting').textContent=`Hey ${user_name} 👋 — ${subject} analysis complete`;
   const ocrNote=ocr_used?.length?` · 🔍 OCR used`:'';
   document.getElementById('resultsMeta').textContent=`${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions.length} predictions${ocrNote}`;
 
-  // stat strip
   document.getElementById('statStrip').innerHTML=[
     [stats.papers,'Papers'],
     [stats.clusters,'Repeats'],
@@ -561,7 +618,6 @@ function showResults(data){
     [predictions.length,'Predictions'],
   ].map(([n,l])=>`<div class="scard"><div class="scard-num">${n}</div><div class="scard-lbl">${l}</div></div>`).join('');
 
-  // tab badges — set AFTER we have the data, fixes the "shows 0" bug
   document.getElementById('tb1').textContent = clusters.length;
   document.getElementById('tb2').textContent = predictions.length;
 
@@ -600,7 +656,7 @@ function showResults(data){
     </div>`;
   }).join('');
 
-  // ── PREDICTIONS — always render if array has items ──
+  // ── PREDICTIONS ──
   if(Array.isArray(predictions) && predictions.length > 0){
     document.getElementById('predList').innerHTML=predictions.map((p,i)=>`
       <div class="pcard ${p.confidence||'MEDIUM'}" style="animation-delay:${i*0.04}s">
@@ -618,12 +674,14 @@ function showResults(data){
     document.getElementById('predList').innerHTML='<p style="color:var(--muted);font-size:13px;padding:20px 0">Predictions are being generated. If this is empty, try re-analyzing.</p>';
   }
 
+  // ── PAPER STRATEGY ──
+  if(paper_strategy) showStrategy(paper_strategy, subject);
+
   // ── LAST HOUR PREP ──
   const lhp = last_hour_prep || {};
   document.getElementById('lhpHeader').innerHTML=`
     <div class="lhp-message">⚡ ${lhp.message || 'Focus. You can do this.'}</div>
     <div class="lhp-strategy">${lhp.passing_strategy || 'Attempt all of Q1 (20 marks) + any 2 from Q2-Q6 (40 marks) = 60 marks minimum passing.'}</div>`;
-
   const mustDo = lhp.must_do || [];
   document.getElementById('lhpGrid').innerHTML = mustDo.length > 0
     ? mustDo.map((q,i)=>`
@@ -643,6 +701,156 @@ function showResults(data){
   document.getElementById('uploadWrap').style.display='none';
   document.getElementById('results').classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
+
+  // GA event
+  if(typeof gtag !== 'undefined') gtag('event','analysis_complete',{subject:subject,papers:stats.papers,clusters:stats.clusters});
+}
+
+// ── PAPER STRATEGY RENDERER ──
+function showStrategy(ps, subject) {
+  const qt = ps.question_types || {};
+  const pf = ps.paper_format || {};
+  const theoryPct = qt.theory_pct || 0;
+  const numPct = qt.numerical_pct || 0;
+
+  // donut SVG helper
+  function donut(pct, color, label, sublabel) {
+    const r = 34, cx = 45, cy = 45;
+    const circ = 2 * Math.PI * r;
+    const dash = (pct / 100) * circ;
+    return `<div class="donut">
+      <svg width="90" height="90" viewBox="0 0 90 90">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="10"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="10"
+          stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
+      </svg>
+      <div class="donut-label">
+        <div class="donut-pct" style="color:${color}">${pct}%</div>
+        <div class="donut-sub">${sublabel}</div>
+      </div>
+    </div>`;
+  }
+
+  // Time bar helper
+  function tbar(label, mins, total, color) {
+    const pct = Math.round(mins/total*100);
+    return `<div class="tbar-row">
+      <span class="tbar-label">${label}</span>
+      <div class="tbar-track"><div class="tbar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="tbar-val" style="color:${color}">${mins}m</span>
+    </div>`;
+  }
+
+  const totalMins = 180;
+  const q1Time = ps.time_split?.['Q1'] || 25;
+  const qOptTime = ps.time_split?.['Q2-Q6 each'] || 27;
+  const bufferTime = ps.time_split?.['buffer'] || 3;
+  const optAttempt = 3;
+  const qOptTotal = qOptTime * optAttempt;
+
+  // attempt order steps
+  const attemptSteps = (ps.first_attempt || '').split('→').map(s => s.trim()).filter(Boolean);
+
+  // theory/numerical topic badges
+  const numTopics = (ps.high_numerical_topics || []);
+  const theoryTopics = (ps.high_theory_topics || []);
+
+  document.getElementById('strategyContent').innerHTML = `
+    <div class="strat-grid">
+
+      <!-- Q type breakdown -->
+      <div class="strat-card blue">
+        <div class="strat-title"><span class="icon">📊</span>Theory vs Numerical</div>
+        <div class="donut-wrap">
+          ${donut(theoryPct, 'var(--blue)', 'Theory', 'theory')}
+          <div class="donut-legend">
+            <div class="dleg">
+              <span class="dleg-dot" style="background:var(--blue)"></span>
+              <span class="dleg-label">Theory / Explanation</span>
+              <span class="dleg-count" style="color:var(--blue)">${qt.theory || 0}Q</span>
+            </div>
+            <div class="dleg">
+              <span class="dleg-dot" style="background:var(--orange)"></span>
+              <span class="dleg-label">Numerical / Calculation</span>
+              <span class="dleg-count" style="color:var(--orange)">${qt.numerical || 0}Q</span>
+            </div>
+            <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">
+              ${numPct > 30 ? '⚠ Practice numericals' : '✓ Theory-heavy — focus on diagrams'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time allocation -->
+      <div class="strat-card orange">
+        <div class="strat-title"><span class="icon">⏱</span>Time Allocation — 180 min</div>
+        <div class="time-bars">
+          ${tbar('Q1 (20m)', q1Time, totalMins, 'var(--orange)')}
+          ${tbar(`Q-opt ×${optAttempt}`, qOptTotal, totalMins, 'var(--purple)')}
+          ${tbar('Buffer', bufferTime, totalMins, 'var(--green)')}
+        </div>
+        <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">
+          ${pf.marks_per_minute || 0.44}m/mark avg ·
+          Spend max <strong style="color:var(--orange)">${Math.round(10/(pf.marks_per_minute||0.44))} min</strong> per 10m question
+        </div>
+      </div>
+
+      <!-- Exam hall strategy — full width -->
+      <div class="strat-card green full">
+        <div class="strat-title"><span class="icon">🏛</span>Exam Hall Strategy</div>
+        <div class="strat-text" style="margin-bottom:14px">${ps.approach || ''}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✓ Attempt first</div>
+            <div style="font-size:12px;color:var(--mutedbr)">${ps.first_attempt || ''}</div>
+          </div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✗ Attempt last</div>
+            <div style="font-size:12px;color:var(--mutedbr)">${ps.avoid_first || ''}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick win -->
+      <div class="strat-card red full">
+        <div class="strat-title"><span class="icon">⚡</span>Quick Win — Fastest Marks</div>
+        <div class="strat-text">${ps.quick_win || ''}</div>
+      </div>
+
+      <!-- Paper format breakdown -->
+      <div class="strat-card blue full">
+        <div class="strat-title"><span class="icon">📋</span>Paper Structure — Mumbai University BE</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--orange)">80</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Total Marks</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--purple)">3 hrs</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Duration</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)">Q1</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Compulsory</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)">3/5</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Attempt Q2-Q6</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${theoryTopics.length ? `<div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Theory questions (HIGH)</div>
+            <div class="type-grid">${theoryTopics.map(t=>`<span class="type-badge" style="color:var(--blue);border-color:rgba(52,152,219,0.3);background:var(--bluedim)">${t}</span>`).join('')}</div>
+          </div>` : ''}
+          ${numTopics.length ? `<div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--orange);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Numerical questions (HIGH)</div>
+            <div class="type-grid">${numTopics.map(t=>`<span class="type-badge" style="color:var(--orange);border-color:rgba(255,92,0,0.3);background:var(--orangedim)">${t}</span>`).join('')}</div>
+          </div>` : ''}
+        </div>
+      </div>
+
+    </div>`;
 }
 
 function tog(id){document.getElementById(id).classList.toggle('open')}
