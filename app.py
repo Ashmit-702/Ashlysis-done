@@ -406,6 +406,162 @@ def cluster_questions_python(all_questions, subject, num_papers):
 
     return deduped[:15]
 
+# ── PAPER STRATEGY — pure Python, zero API calls ──
+
+NUMERICAL_SIGNALS = [
+    r'\d{3,}',                          # 3+ digit numbers (cylinder 345, track 80)
+    r'\d+\s*(kb|mb|gb|ns|ms|ms)',       # units
+    r'calculate|compute|find|determine|solve|evaluate',
+    r'gantt chart|turnaround|waiting time|hit ratio|miss ratio',
+    r'page fault|frame size|time quantum',
+    r'cylinder|track|seek|head',         # disk scheduling
+    r'arrive|burst|priority|quantum',    # process scheduling
+    r'lru|fifo|optimal.*page',           # page replacement
+    r'fcfs|sjf|round robin|rr\b',
+    r'first fit|best fit|worst fit',
+    r'bandwidth|throughput|utilization',
+    r'\b\d+\s*[×x\*]\s*\d+',           # multiplication
+    r'checksum|crc|hamming',
+]
+
+def classify_question(question_text):
+    q = question_text.lower()
+    for pattern in NUMERICAL_SIGNALS:
+        if re.search(pattern, q, re.I):
+            return 'numerical'
+    return 'theory'
+
+# Subject-specific exam hall strategy
+SUBJECT_STRATEGY = {
+    "os": {
+        "approach": "Start with Q1 (all parts — process states, scheduling criteria are Q1 staples). Then pick Disk Scheduling (numerical — solve first, guaranteed marks). Follow with Process Scheduling (Gantt chart). Leave Deadlock for last — most explanation heavy.",
+        "time_split": {"Q1": 30, "Q2-Q6 each": 25, "buffer": 5},
+        "first_attempt": "Disk Scheduling → Process Scheduling → Semaphore/Deadlock",
+        "avoid_first": "Memory management (paging calculations take time)",
+        "quick_win": "Q1 short notes — 20 marks in 30 minutes if you know the topics"
+    },
+    "mc": {
+        "approach": "MC is almost entirely theory + diagrams. No numerical. Start Q1 (architecture diagrams are Q1 staples). Then pick Mobile Packet Delivery (diagram-heavy but predictable). GSM/GPRS architecture diagrams are the fastest marks — draw once, explain labels.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "GPRS/GSM Architecture → Mobile Terminated Call → Packet Delivery",
+        "avoid_first": "Snooping TCP (requires comparison table — takes time)",
+        "quick_win": "Draw the architecture diagram first, then write labels — saves 5 minutes per question"
+    },
+    "spcc": {
+        "approach": "Mix of theory and numerical (assembler pass tables, parse tables). Start Q1 (definitions, short notes). Then Two-pass Assembler (draw flowchart — fast marks). Parser questions are numerical — save for when you're warmed up.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "Two-pass Assembler → Loader → Compiler Phases",
+        "avoid_first": "SLR/LL(1) parse tables (calculation-heavy, time consuming)",
+        "quick_win": "Assembler directives list + Pass 1 vs Pass 2 table — 10 marks in 10 minutes"
+    },
+    "dbms": {
+        "approach": "Normalization is the king topic — always appears, always 10 marks. Start Q1 (ER diagram, short notes). Normalization first from Q2-Q6. SQL queries are fast if you know them.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "Normalization → ER Diagram → SQL Queries",
+        "avoid_first": "Relational algebra (notation-heavy, easy to make errors)",
+        "quick_win": "Write 1NF → 2NF → 3NF → BCNF with example table — most marks in normalization"
+    },
+    "cn": {
+        "approach": "OSI model is the backbone — always in Q1. Start Q1 (OSI layers, TCP/IP). Then routing algorithms (Dijkstra is numerical but structured). Error detection is mix of theory + CRC calculation.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "OSI Model → TCP/IP → Routing Algorithms",
+        "avoid_first": "Congestion control (requires understanding of multiple mechanisms)",
+        "quick_win": "OSI 7 layers with functions table — 5 marks in 5 minutes"
+    },
+    "dsa": {
+        "approach": "Almost all numerical — tracing algorithms, drawing trees. Start with sorting (draw array, show passes). Graph BFS/DFS is fast to trace. Dynamic programming is hardest — save for last.",
+        "time_split": {"Q1": 20, "Q2-Q6 each": 28, "buffer": 4},
+        "first_attempt": "Sorting trace → Graph BFS/DFS → Tree operations",
+        "avoid_first": "Dynamic programming (time-consuming for complex problems)",
+        "quick_win": "Quick sort partition trace — show pivot selection and array state after each pass"
+    },
+    "ai": {
+        "approach": "Mix of theory and algorithm tracing (A*, minimax). Start Q1 (PEAS, agent types — pure theory). Then Hill Climbing (algorithm trace is structured). Alpha-Beta pruning is fast to draw on paper.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "Hill Climbing → Planning → Alpha-Beta Pruning",
+        "avoid_first": "FOL/Resolution (notation-heavy, easy to make errors)",
+        "quick_win": "Alpha-Beta pruning on a given tree — draw tree, mark α β values"
+    },
+    "ml": {
+        "approach": "Theory-heavy with some calculations (regression, confusion matrix). Start Q1 (definitions). Linear/Logistic Regression next — structured derivation. SVM is diagram-heavy.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "Regression → Decision Tree → Neural Network",
+        "avoid_first": "SVM (kernel math is complex under time pressure)",
+        "quick_win": "Decision tree with example dataset — draw tree, show splits"
+    },
+    "general": {
+        "approach": "Attempt Q1 first (compulsory, 20 marks). Then pick the 3 questions from Q2-Q6 where you have most knowledge. Always attempt questions where you can draw a diagram — diagrams get marks even if explanation is incomplete.",
+        "time_split": {"Q1": 25, "Q2-Q6 each": 27, "buffer": 3},
+        "first_attempt": "Topics you know best → diagram-heavy questions → theory questions",
+        "avoid_first": "Questions requiring long calculations unless you are very confident",
+        "quick_win": "Any question with a diagram — draw first, label it, then explain in 4-5 points"
+    }
+}
+
+def classify_all_questions(all_questions):
+    """Classify every extracted question as theory or numerical"""
+    theory_count = 0
+    numerical_count = 0
+    for q in all_questions:
+        if classify_question(q.get('question', '')) == 'numerical':
+            numerical_count += 1
+        else:
+            theory_count += 1
+    total = max(theory_count + numerical_count, 1)
+    return {
+        'theory': theory_count,
+        'numerical': numerical_count,
+        'theory_pct': round(theory_count / total * 100),
+        'numerical_pct': round(numerical_count / total * 100),
+        'total': total
+    }
+
+def build_paper_strategy(clusters, all_questions, subject):
+    """Build complete paper strategy — pure Python, zero API calls"""
+    qt = classify_all_questions(all_questions)
+    strategy = SUBJECT_STRATEGY.get(subject, SUBJECT_STRATEGY['general'])
+
+    # Which clusters have numerical questions
+    numerical_clusters = []
+    theory_clusters = []
+    for c in clusters:
+        is_num = any(classify_question(q) == 'numerical' for q in c.get('questions', []))
+        if is_num:
+            numerical_clusters.append(c['topic'])
+        else:
+            theory_clusters.append(c['topic'])
+
+    # Attempt order based on importance + type
+    high_theory = [c['topic'] for c in clusters if c['importance'] == 'HIGH' and c['topic'] in theory_clusters]
+    high_numerical = [c['topic'] for c in clusters if c['importance'] == 'HIGH' and c['topic'] in numerical_clusters]
+
+    # Time allocation
+    time_split = strategy['time_split']
+
+    return {
+        'question_types': qt,
+        'numerical_clusters': numerical_clusters,
+        'theory_clusters': theory_clusters,
+        'approach': strategy['approach'],
+        'time_split': time_split,
+        'first_attempt': strategy['first_attempt'],
+        'avoid_first': strategy['avoid_first'],
+        'quick_win': strategy['quick_win'],
+        'high_theory_topics': high_theory[:5],
+        'high_numerical_topics': high_numerical[:5],
+        'paper_format': {
+            'total_marks': 80,
+            'duration_mins': 180,
+            'q1_marks': 20,
+            'q1_parts': 4,
+            'q1_marks_each': 5,
+            'optional_questions': 5,
+            'attempt_optional': 3,
+            'optional_marks_each': 20,
+            'marks_per_minute': round(80 / 180, 2)
+        }
+    }
+
 # ── STEP 3: GROQ ENRICHMENT ──
 # Returns: tips (applied to clusters) + predictions (10) + last_hour_prep (5 must-do)
 def enrich_with_groq(clusters, user_name, subject, client):
@@ -704,6 +860,10 @@ def analyze():
             gc.collect()
 
         clusters = cluster_questions_python(all_questions, subject, len(all_papers_text))
+
+        # Build paper strategy — pure Python, zero API calls
+        paper_strategy = build_paper_strategy(clusters, all_questions, subject)
+
         enrichment = enrich_with_groq(clusters, user_name, subject, client)
 
         # ── GUARANTEED: predictions and last_hour_prep always present ──
@@ -726,6 +886,7 @@ def analyze():
         'clusters': clusters,
         'predictions': predictions,
         'last_hour_prep': last_hour_prep,
+        'paper_strategy': paper_strategy,
         'user_name': user_name,
         'subject': subject.upper(),
         'ocr_used': ocr_used,
@@ -765,11 +926,16 @@ def export_results():
 
     lines += ["", D, "REPEATING QUESTIONS", D]
     for i, c in enumerate(clusters, 1):
-        
+        pos = c.get('question_positions', [])
+        marks = c.get('marks_each_time', [])
         lines += [
-            f"\n{i}. {c.get('topic')} ({c.get('frequency')}x)"
+            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
+            f"   Papers : {', '.join(c.get('papers', []))}",
+            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
+            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
+            f"   Pattern: {c.get('pattern_note', '')}",
+            f"   Tip    : {c.get('tip', '')}",
         ]
-        
         for q in c.get('questions', [])[:4]:
             lines.append(f"   • {q[:200]}")
 
