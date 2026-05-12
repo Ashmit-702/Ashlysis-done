@@ -765,16 +765,11 @@ def export_results():
 
     lines += ["", D, "REPEATING QUESTIONS", D]
     for i, c in enumerate(clusters, 1):
-        pos = c.get('question_positions', [])
-        marks = c.get('marks_each_time', [])
+        
         lines += [
-            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
-            f"   Papers : {', '.join(c.get('papers', []))}",
-            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
-            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
-            f"   Pattern: {c.get('pattern_note', '')}",
-            f"   Tip    : {c.get('tip', '')}",
+            f"\n{i}. {c.get('topic')} ({c.get('frequency')}x)"
         ]
+        
         for q in c.get('questions', [])[:4]:
             lines.append(f"   • {q[:200]}")
 
