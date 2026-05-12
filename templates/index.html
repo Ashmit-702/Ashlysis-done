@@ -428,7 +428,7 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
   <div class="tabs-wrap">
     <button class="tab active" onclick="switchTab('repeats',this)">🔁 REPEATS <span class="tab-badge" id="tb1">0</span></button>
     <button class="tab" onclick="switchTab('predictions',this)">🔮 PREDICTIONS <span class="tab-badge" id="tb2">0</span></button>
-    <button class="tab" onclick="switchTab('strategy',this)">📊 PAPER STRATEGY</button>
+    <button class="tab" onclick="switchTab('strategy',this)">✦ SPECIAL WINDOW</button>
     <button class="tab" onclick="switchTab('lasthour',this)" style="color:var(--red)">⚡ LAST HOUR PREP</button>
   </div>
 
@@ -674,10 +674,9 @@ function showResults(data){
     document.getElementById('predList').innerHTML='<p style="color:var(--muted);font-size:13px;padding:20px 0">Predictions are being generated. If this is empty, try re-analyzing.</p>';
   }
 
-  // ── PAPER STRATEGY ──
-  if(paper_strategy) showStrategy(paper_strategy, subject);
-
-  // ── LAST HOUR PREP ──
+  // ── SPECIAL WINDOW (Paper Strategy) — always renders ──
+  showStrategy(paper_strategy || {}, subject);
+  document.getElementById('uploadWrap').style.display='none';
   const lhp = last_hour_prep || {};
   document.getElementById('lhpHeader').innerHTML=`
     <div class="lhp-message">⚡ ${lhp.message || 'Focus. You can do this.'}</div>
@@ -706,23 +705,117 @@ function showResults(data){
   if(typeof gtag !== 'undefined') gtag('event','analysis_complete',{subject:subject,papers:stats.papers,clusters:stats.clusters});
 }
 
-// ── PAPER STRATEGY RENDERER ──
-function showStrategy(ps, subject) {
-  const qt = ps.question_types || {};
-  const pf = ps.paper_format || {};
-  const theoryPct = qt.theory_pct || 0;
-  const numPct = qt.numerical_pct || 0;
+// ── SPECIAL WINDOW RENDERER — always renders, never empty ──
+const STRAT_DB = {
+  mc: {
+    approach: "MC is almost entirely theory + diagrams. No numerical questions. Start Q1 — architecture short notes are Q1 staples. Then pick GSM/GPRS architecture diagrams (fastest marks — draw once, label components). Mobile Terminated Call is always 10 marks and appears every year.",
+    first_attempt: "GPRS/GSM Architecture → Mobile Terminated Call → Packet Delivery",
+    avoid_first: "Snooping TCP (requires comparison table — takes time to write)",
+    quick_win: "Draw the architecture diagram first, then write labels — saves 5 minutes per question. Every MC question with a diagram gets marks even with incomplete text.",
+    type_note: "Theory-heavy — focus on diagrams and component functions",
+    num_heavy: false
+  },
+  os: {
+    approach: "OS has both theory and numericals. Start Q1 (process states, scheduling criteria). Then Disk Scheduling first from Q2-Q6 — numerical but structured, guaranteed marks if you show the calculation. Process Scheduling Gantt chart next. Leave Deadlock for last.",
+    first_attempt: "Disk Scheduling (numerical) → Process Scheduling (Gantt) → Semaphore",
+    avoid_first: "Memory management paging calculations — take longer than expected",
+    quick_win: "Q1 short notes: 20 marks in 30 minutes if you know the topics. Write 4-5 points per Q1 part.",
+    type_note: "Mixed — practice both diagram and numerical questions",
+    num_heavy: true
+  },
+  spcc: {
+    approach: "Mix of theory and numerical (assembler pass tables, parse trees). Start Q1 (definitions, assembler directives — pure theory). Then Two-pass Assembler (draw flowchart — structured, fast marks). Parser questions are numerical — tackle when warmed up.",
+    first_attempt: "Two-pass Assembler → Loader Types → Compiler Phases",
+    avoid_first: "SLR/LL(1) parse tables — calculation-heavy, time consuming under pressure",
+    quick_win: "Assembler Pass 1 vs Pass 2 comparison table — 10 marks in 10 minutes if memorized",
+    type_note: "Mixed — memorize pass tables and flowcharts",
+    num_heavy: true
+  },
+  dbms: {
+    approach: "Normalization is the most repeated topic — always 10 marks. Start Q1 (ER diagram short note, definitions). Then Normalization from Q2-Q6 — structured answer with example table. SQL queries are fast if you know them.",
+    first_attempt: "Normalization → ER Diagram → SQL Queries",
+    avoid_first: "Relational algebra — notation-heavy, easy to make errors under pressure",
+    quick_win: "1NF → 2NF → 3NF → BCNF with one example table throughout — most marks in normalization",
+    type_note: "Theory-heavy — focus on normalization steps and examples",
+    num_heavy: false
+  },
+  cn: {
+    approach: "OSI model is the backbone — always in Q1. Start Q1 (OSI 7 layers, TCP/IP comparison). Then routing algorithms (Dijkstra is numerical but structured). Error detection is mixed theory + CRC calculation.",
+    first_attempt: "OSI Model → TCP/IP → Routing Algorithms",
+    avoid_first: "Congestion control — requires understanding of multiple mechanisms simultaneously",
+    quick_win: "OSI 7 layers with function of each — 5 marks in 5 minutes if memorized as a table",
+    type_note: "Mixed — layer functions are theory, routing is numerical",
+    num_heavy: true
+  },
+  dsa: {
+    approach: "Almost all numerical — tracing algorithms, drawing trees, showing array states. Start with sorting (draw array, show each pass). Graph BFS/DFS trace is fast. Dynamic programming is hardest — save for last.",
+    first_attempt: "Sorting algorithm trace → Graph BFS/DFS → Tree operations",
+    avoid_first: "Dynamic programming — time-consuming, complex tracing for hard problems",
+    quick_win: "Quick sort: show partition step by step with pivot clearly marked — structured, easy to write",
+    type_note: "Numerical-heavy — practice tracing algorithms on paper",
+    num_heavy: true
+  },
+  ai: {
+    approach: "Mix of theory and algorithm tracing (A*, minimax tree). Start Q1 (PEAS descriptor, agent types — pure theory). Hill Climbing is structured algorithm explanation. Alpha-Beta pruning is fast to draw — show α β values at each node.",
+    first_attempt: "Hill Climbing → Planning (Partial Order) → Alpha-Beta Pruning",
+    avoid_first: "FOL Resolution — notation-heavy, easy to make errors under time pressure",
+    quick_win: "Alpha-Beta pruning on a given tree — draw tree, mark α β values at each node — 10 marks in 15 min",
+    type_note: "Theory-heavy with some algorithm tracing",
+    num_heavy: false
+  },
+  ml: {
+    approach: "Theory-heavy with some calculations. Start Q1 (definitions, types of learning). Linear/Logistic Regression next — structured derivation. Decision Tree is diagram-heavy but fast.",
+    first_attempt: "Regression → Decision Tree → Neural Network",
+    avoid_first: "SVM kernel math — complex under time pressure, easy to lose marks on derivation",
+    quick_win: "Decision tree with a small example dataset — draw tree, show information gain calculation",
+    type_note: "Theory-heavy — focus on algorithm steps and examples",
+    num_heavy: false
+  },
+  general: {
+    approach: "Attempt Q1 first (compulsory, 20 marks — always do all 4 parts). Then pick 3 from Q2-Q6 where you have most knowledge. Always attempt questions where you can draw a diagram — diagrams get marks even if text explanation is incomplete.",
+    first_attempt: "Topics you know best → diagram-heavy questions → theory questions",
+    avoid_first: "Questions requiring long calculations unless you are very confident",
+    quick_win: "Any question with a diagram — draw first and label it, then explain in 4-5 bullet points",
+    type_note: "Attempt diagram questions first for guaranteed partial marks",
+    num_heavy: false
+  }
+};
 
-  // donut SVG helper
-  function donut(pct, color, label, sublabel) {
-    const r = 34, cx = 45, cy = 45;
-    const circ = 2 * Math.PI * r;
-    const dash = (pct / 100) * circ;
+function showStrategy(ps, subjectRaw) {
+  const subj = (subjectRaw || 'general').toLowerCase();
+  const db = STRAT_DB[subj] || STRAT_DB['general'];
+
+  // Merge backend data (if available) with hardcoded fallback
+  const approach     = ps.approach     || db.approach;
+  const firstAttempt = ps.first_attempt || db.first_attempt;
+  const avoidFirst   = ps.avoid_first  || db.avoid_first;
+  const quickWin     = ps.quick_win    || db.quick_win;
+
+  // Question type data from backend or estimate from subject
+  const qt = ps.question_types || {};
+  const theoryPct  = qt.theory_pct  || (db.num_heavy ? 55 : 85);
+  const numPct     = qt.numerical_pct || (db.num_heavy ? 45 : 15);
+  const theoryCount = qt.theory   || '—';
+  const numCount    = qt.numerical || '—';
+
+  // Time split
+  const q1Time    = (ps.time_split && ps.time_split['Q1'])          || 25;
+  const qOptTime  = (ps.time_split && ps.time_split['Q2-Q6 each'])  || 27;
+  const bufTime   = (ps.time_split && ps.time_split['buffer'])       || 3;
+  const qOptTotal = qOptTime * 3;
+
+  // Topic type lists from backend
+  const theoryTopics  = (ps.high_theory_topics   || []);
+  const numTopics     = (ps.high_numerical_topics || []);
+
+  // Donut SVG
+  function donut(pct, color, sublabel) {
+    const r=34,cx=45,cy=45,circ=2*Math.PI*r,dash=(pct/100)*circ;
     return `<div class="donut">
       <svg width="90" height="90" viewBox="0 0 90 90">
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="10"/>
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="10"
-          stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
+          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
       </svg>
       <div class="donut-label">
         <div class="donut-pct" style="color:${color}">${pct}%</div>
@@ -731,9 +824,9 @@ function showStrategy(ps, subject) {
     </div>`;
   }
 
-  // Time bar helper
+  // Time bar
   function tbar(label, mins, total, color) {
-    const pct = Math.round(mins/total*100);
+    const pct = Math.min(Math.round(mins/total*100), 100);
     return `<div class="tbar-row">
       <span class="tbar-label">${label}</span>
       <div class="tbar-track"><div class="tbar-fill" style="width:${pct}%;background:${color}"></div></div>
@@ -741,104 +834,84 @@ function showStrategy(ps, subject) {
     </div>`;
   }
 
-  const totalMins = 180;
-  const q1Time = ps.time_split?.['Q1'] || 25;
-  const qOptTime = ps.time_split?.['Q2-Q6 each'] || 27;
-  const bufferTime = ps.time_split?.['buffer'] || 3;
-  const optAttempt = 3;
-  const qOptTotal = qOptTime * optAttempt;
-
-  // attempt order steps
-  const attemptSteps = (ps.first_attempt || '').split('→').map(s => s.trim()).filter(Boolean);
-
-  // theory/numerical topic badges
-  const numTopics = (ps.high_numerical_topics || []);
-  const theoryTopics = (ps.high_theory_topics || []);
-
   document.getElementById('strategyContent').innerHTML = `
     <div class="strat-grid">
 
-      <!-- Q type breakdown -->
       <div class="strat-card blue">
         <div class="strat-title"><span class="icon">📊</span>Theory vs Numerical</div>
         <div class="donut-wrap">
-          ${donut(theoryPct, 'var(--blue)', 'Theory', 'theory')}
+          ${donut(theoryPct, 'var(--blue)', 'theory')}
           <div class="donut-legend">
             <div class="dleg">
               <span class="dleg-dot" style="background:var(--blue)"></span>
               <span class="dleg-label">Theory / Explanation</span>
-              <span class="dleg-count" style="color:var(--blue)">${qt.theory || 0}Q</span>
+              <span class="dleg-count" style="color:var(--blue)">${theoryCount}Q</span>
             </div>
             <div class="dleg">
               <span class="dleg-dot" style="background:var(--orange)"></span>
               <span class="dleg-label">Numerical / Calculation</span>
-              <span class="dleg-count" style="color:var(--orange)">${qt.numerical || 0}Q</span>
+              <span class="dleg-count" style="color:var(--orange)">${numCount}Q</span>
             </div>
             <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">
-              ${numPct > 30 ? '⚠ Practice numericals' : '✓ Theory-heavy — focus on diagrams'}
+              ${db.type_note}
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Time allocation -->
       <div class="strat-card orange">
         <div class="strat-title"><span class="icon">⏱</span>Time Allocation — 180 min</div>
         <div class="time-bars">
-          ${tbar('Q1 (20m)', q1Time, totalMins, 'var(--orange)')}
-          ${tbar(`Q-opt ×${optAttempt}`, qOptTotal, totalMins, 'var(--purple)')}
-          ${tbar('Buffer', bufferTime, totalMins, 'var(--green)')}
+          ${tbar('Q1 (20m)', q1Time, 180, 'var(--orange)')}
+          ${tbar('Q opt ×3', qOptTotal, 180, 'var(--purple)')}
+          ${tbar('Buffer', bufTime, 180, 'var(--green)')}
         </div>
         <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">
-          ${pf.marks_per_minute || 0.44}m/mark avg ·
-          Spend max <strong style="color:var(--orange)">${Math.round(10/(pf.marks_per_minute||0.44))} min</strong> per 10m question
+          Spend max <strong style="color:var(--orange)">${Math.round(10/0.44)} min</strong> per 10-mark question &nbsp;·&nbsp; 0.44 marks/min
         </div>
       </div>
 
-      <!-- Exam hall strategy — full width -->
       <div class="strat-card green full">
-        <div class="strat-title"><span class="icon">🏛</span>Exam Hall Strategy</div>
-        <div class="strat-text" style="margin-bottom:14px">${ps.approach || ''}</div>
+        <div class="strat-title"><span class="icon">🏛</span>Exam Hall Approach</div>
+        <div class="strat-text" style="margin-bottom:14px">${approach}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
+          <div style="background:var(--bg3);border:1px solid rgba(46,204,113,0.2);border-radius:6px;padding:12px">
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✓ Attempt first</div>
-            <div style="font-size:12px;color:var(--mutedbr)">${ps.first_attempt || ''}</div>
+            <div style="font-size:12px;color:var(--mutedbr);line-height:1.7">${firstAttempt}</div>
           </div>
-          <div>
+          <div style="background:var(--bg3);border:1px solid rgba(231,76,60,0.2);border-radius:6px;padding:12px">
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✗ Attempt last</div>
-            <div style="font-size:12px;color:var(--mutedbr)">${ps.avoid_first || ''}</div>
+            <div style="font-size:12px;color:var(--mutedbr);line-height:1.7">${avoidFirst}</div>
           </div>
         </div>
       </div>
 
-      <!-- Quick win -->
       <div class="strat-card red full">
         <div class="strat-title"><span class="icon">⚡</span>Quick Win — Fastest Marks</div>
-        <div class="strat-text">${ps.quick_win || ''}</div>
+        <div class="strat-text">${quickWin}</div>
       </div>
 
-      <!-- Paper format breakdown -->
       <div class="strat-card blue full">
-        <div class="strat-title"><span class="icon">📋</span>Paper Structure — Mumbai University BE</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        <div class="strat-title"><span class="icon">📋</span>Paper Format — Mumbai University BE</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${(theoryTopics.length||numTopics.length)?'14px':'0'}">
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--orange)">80</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--orange)">80</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Total Marks</div>
           </div>
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--purple)">3 hrs</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--purple)">3 hrs</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Duration</div>
           </div>
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--green)">Q1</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Compulsory</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)">Q1</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Compulsory 20m</div>
           </div>
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)">3/5</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red)">3/5</div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Attempt Q2-Q6</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${(theoryTopics.length || numTopics.length) ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
           ${theoryTopics.length ? `<div>
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Theory questions (HIGH)</div>
             <div class="type-grid">${theoryTopics.map(t=>`<span class="type-badge" style="color:var(--blue);border-color:rgba(52,152,219,0.3);background:var(--bluedim)">${t}</span>`).join('')}</div>
@@ -847,7 +920,7 @@ function showStrategy(ps, subject) {
             <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--orange);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Numerical questions (HIGH)</div>
             <div class="type-grid">${numTopics.map(t=>`<span class="type-badge" style="color:var(--orange);border-color:rgba(255,92,0,0.3);background:var(--orangedim)">${t}</span>`).join('')}</div>
           </div>` : ''}
-        </div>
+        </div>` : ''}
       </div>
 
     </div>`;
