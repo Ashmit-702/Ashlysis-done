@@ -903,13 +903,13 @@ def analyze():
 @app.route('/export', methods=['POST'])
 def export_results():
     data = request.json
-    clusters = data.get('clusters', [])
-    predictions = data.get('predictions', [])
+    clusters      = data.get('clusters', [])
+    predictions   = data.get('predictions', [])
     last_hour_prep = data.get('last_hour_prep', {})
-    stats = data.get('stats', {})
-    user_name = data.get('user_name', 'Student')
-    subject = data.get('subject', '')
-    today = datetime.now().strftime('%Y%m%d')
+    stats         = data.get('stats', {})
+    user_name     = data.get('user_name', 'Student')
+    subject       = data.get('subject', '')
+    today         = datetime.now().strftime('%Y%m%d')
     D = "━" * 52
 
     lines = [
@@ -920,37 +920,51 @@ def export_results():
         f"Subject  : {subject}",
         f"Date     : {datetime.now().strftime('%d %b %Y %I:%M %p')}",
         f"Papers   : {stats.get('papers', 0)}",
-        f"Clusters : {stats.get('clusters', 0)}",
         f"HIGH     : {stats.get('high_priority', 0)}",
     ]
 
-    lines += ["", D, "REPEATING QUESTIONS", D]
+    # ── SECTION 1: CLEAN NUMBERED QUESTION LIST ──
+    lines += ["", D, "REPEATING QUESTIONS", D, ""]
     for i, c in enumerate(clusters, 1):
-        pos = c.get('question_positions', [])
+        marks = c.get('marks_each_time', [])
+        pos   = c.get('question_positions', [])
+        m_str = f"{marks[0]}m" if marks else "?"
+        p_str = pos[0] if pos else "?"
+        imp   = c.get('importance', 'LOW')
+        freq  = c.get('frequency', 1)
+        # Best question for this cluster
+        best_q = c['questions'][0].strip() if c.get('questions') else c['topic']
+        lines.append(f"{i}. [{imp}] {best_q}  [{m_str} · {p_str} · {freq}x]")
+
+    # ── SECTION 2: FULL PATTERN ANALYSIS ──
+    lines += ["", "", D, "PATTERN ANALYSIS", D]
+    for i, c in enumerate(clusters, 1):
+        pos   = c.get('question_positions', [])
         marks = c.get('marks_each_time', [])
         lines += [
             f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
             f"   Papers : {', '.join(c.get('papers', []))}",
             f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
             f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
-            f"   Pattern: {c.get('pattern_note', '')}",
             f"   Tip    : {c.get('tip', '')}",
         ]
-        for q in c.get('questions', [])[:4]:
+        for q in c.get('questions', [])[:3]:
             lines.append(f"   • {q[:200]}")
 
+    # ── SECTION 3: PREDICTED QUESTIONS ──
     lines += ["", D, "PREDICTED QUESTIONS", D]
     for i, p in enumerate(predictions, 1):
         lines += [
             f"\n{i}. [{p.get('confidence')}] {p.get('question', '')[:200]}",
-            f"   Pos: {p.get('likely_position', '?')} | Marks: {p.get('likely_marks', '?')} | {p.get('reason', '')}"
+            f"   Pos: {p.get('likely_position', '?')} | Marks: {p.get('likely_marks', '?')}m | {p.get('reason', '')}"
         ]
 
+    # ── SECTION 4: LAST HOUR PREP ──
     lines += ["", D, "LAST HOUR PREP — MINIMUM PASSING (40%)", D]
     if last_hour_prep:
         lines += [
             f"\n{last_hour_prep.get('message', '')}",
-            f"\nStrategy: {last_hour_prep.get('passing_strategy', '')}",
+            f"Strategy: {last_hour_prep.get('passing_strategy', '')}",
             "\nMUST DO — 5 questions:"
         ]
         for q in last_hour_prep.get('must_do', []):
