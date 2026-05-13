@@ -941,27 +941,27 @@ def export_results():
         questions = c.get('questions', [])
 
         if not questions:
-        continue
+            continue
 
         main_q = questions[0].strip()
 
         if main_q in seen_questions:
-        continue
+            continue
 
         seen_questions.add(main_q)
 
         marks = ""
 
         if c.get('marks_each_time'):
-        marks = f" [{c.get('marks_each_time')[0]}m]"
+            marks = f" [{c.get('marks_each_time')[0]}m]"
 
         pos = ""
 
         if c.get('question_positions'):
-        pos = f" [{c.get('question_positions')[0]}]"
+            pos = f" [{c.get('question_positions')[0]}]"
 
         lines.append(
-        f"{i}. {main_q}{marks}{pos}"
+            f"{i}. {main_q}{marks}{pos}"
        )
 
     lines.append("")
