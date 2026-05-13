@@ -31,6 +31,39 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
+# ── GROQ KEY ROTATION ──
+# Set GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3 etc. in Render environment.
+# App auto-rotates when any key hits rate limit. Each key = 1 free Groq account.
+_key_index = {'i': 0}
+_key_lock = threading.Lock()
+
+def get_groq_keys():
+    keys = []
+    k = os.environ.get('GROQ_API_KEY', '')
+    if k: keys.append(k)
+    for n in range(2, 10):
+        k = os.environ.get(f'GROQ_API_KEY_{n}', '')
+        if k: keys.append(k)
+    return keys
+
+def get_groq_client():
+    """Returns a Groq client using the current key in rotation."""
+    keys = get_groq_keys()
+    if not keys:
+        raise Exception('No GROQ_API_KEY configured.')
+    with _key_lock:
+        idx = _key_index['i'] % len(keys)
+    return Groq(api_key=keys[idx]), len(keys)
+
+def rotate_groq_key():
+    """Advance to next key. Returns True if rotation happened."""
+    keys = get_groq_keys()
+    if len(keys) <= 1:
+        return False
+    with _key_lock:
+        _key_index['i'] = (_key_index['i'] + 1) % len(keys)
+    return True
+
 PAPER_FORMAT = "Q1a/b/c/d = 5 marks each. Q2A/B through Q6A/B = 10 marks each. Total 80 marks, 3 hours."
 
 SUBJECT_TOPICS = {
@@ -240,25 +273,33 @@ Rules:
 - marks: 5 for Q1 parts, 10 for Q2-Q6, 0 if unclear
 - Extract exact question text
 - Return ONLY the JSON array, no markdown"""
-    try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": "Extract exam questions as JSON array. No markdown."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.0,
-            max_tokens=2000
-        )
-        raw = resp.choices[0].message.content.strip()
-        raw = re.sub(r'^```(?:json)?\n?', '', raw)
-        raw = re.sub(r'\n?```$', '', raw).strip()
-        questions = json.loads(raw)
-        for q in questions:
-            q['paper'] = paper_name
-        return questions
-    except Exception:
-        return []
+    for _attempt in range(3):
+        try:
+            resp = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "Extract exam questions as JSON array. No markdown."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.0,
+                max_tokens=2000
+            )
+            raw = resp.choices[0].message.content.strip()
+            raw = re.sub(r'^```(?:json)?\n?', '', raw)
+            raw = re.sub(r'\n?```$', '', raw).strip()
+            questions = json.loads(raw)
+            for q in questions:
+                q['paper'] = paper_name
+            return questions
+        except Exception as e:
+            err = str(e).lower()
+            if ('rate' in err or '429' in err) and _attempt < 2:
+                rotated = rotate_groq_key()
+                client = Groq(api_key=get_groq_keys()[_key_index['i'] % len(get_groq_keys())])
+                time.sleep(3 if rotated else 15)
+                continue
+            return []
+    return []
 
 # ── STEP 2: TF-IDF CLUSTERING ──
 STOPWORDS = {
@@ -748,9 +789,15 @@ RULES — strictly follow:
             err = str(e).lower()
             if 'rate' in err or '429' in err:
                 if attempt < 2:
-                    time.sleep(20)
+                    rotated = rotate_groq_key()
+                    if rotated:
+                        # switched to new key — try immediately
+                        time.sleep(2)
+                    else:
+                        # only one key — wait
+                        time.sleep(20)
                     continue
-                raise Exception('AI rate limit. Wait 1 minute and try again.')
+                raise Exception('AI rate limit hit on all keys. Wait 1 minute and try again.')
             raise e
 
     # All attempts failed — full Python fallback
@@ -799,7 +846,7 @@ def analyze():
     user_name = re.sub(r'[^a-zA-Z0-9 ]', '', user_name)[:30]
     subject = request.form.get('subject', 'general').strip()
 
-    if not os.environ.get('GROQ_API_KEY'):
+    if not get_groq_keys():
         return jsonify({'error': 'Service not configured.'}), 500
 
     try: check_quota()
@@ -809,7 +856,7 @@ def analyze():
     if not acquired:
         return jsonify({'error': 'Server is busy. Please wait 30 seconds and try again.'}), 429
 
-    client = Groq(api_key=os.environ.get('GROQ_API_KEY'))
+    client, num_keys = get_groq_client()
     all_papers_text = {}
     paper_stats = {}
     ocr_used = []
