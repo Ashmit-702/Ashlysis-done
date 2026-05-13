@@ -5,287 +5,475 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ASHLYSIS — Exam Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+
 :root{
-  --bg:#080810;--bg2:#0f0f1a;--bg3:#16162a;--bg4:#1e1e35;
-  --border:rgba(255,255,255,0.06);--borderhi:rgba(255,255,255,0.14);
-  --text:#eeeef5;--muted:#5a5a7a;--mutedbr:#9090b0;
-  --orange:#ff5c00;--orange2:#ff8c42;--orangedim:rgba(255,92,0,0.1);--orangeglow:rgba(255,92,0,0.2);
-  --purple:#7c5cfc;--purpledim:rgba(124,92,252,0.1);
-  --green:#2ecc71;--greendim:rgba(46,204,113,0.1);
-  --red:#e74c3c;--reddim:rgba(231,76,60,0.1);
-  --yellow:#f1c40f;--yellowdim:rgba(241,196,15,0.1);
-  --blue:#3498db;--bluedim:rgba(52,152,219,0.1);
+  --bg:#09090E;
+  --bg2:#111118;
+  --bg3:#18181F;
+  --bg4:#1E1E27;
+  --surface:rgba(255,255,255,0.025);
+  --border:rgba(255,255,255,0.07);
+  --borderhi:rgba(255,255,255,0.13);
+  --glass:rgba(255,255,255,0.04);
+  --text:#F2F2F7;
+  --text2:#B0B0C8;
+  --muted:#55556A;
+  --muted2:#7878A0;
+  --a:#E8D5A0;
+  --a-dark:#C4A855;
+  --adim:rgba(232,213,160,0.07);
+  --aglow:rgba(196,168,85,0.18);
+  --hi:#C05060;
+  --hidim:rgba(192,80,96,0.08);
+  --med:#C08040;
+  --meddim:rgba(192,128,64,0.08);
+  --lo:#408070;
+  --lodim:rgba(64,128,112,0.08);
+  --blue:#4870C0;
+  --bluedim:rgba(72,112,192,0.08);
+  --purple:#7860C0;
+  --purpledim:rgba(120,96,192,0.08);
+  --radius:12px;
+  --radius-sm:7px;
 }
+
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden}
-body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:0.6}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  min-height:100vh;overflow-x:hidden;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='0.022'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
 
-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 40px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;background:rgba(8,8,16,0.94);backdrop-filter:blur(16px)}
-.logo{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:0.1em;display:flex;align-items:center;gap:10px}
-.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 14px var(--orange);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(0.8);opacity:0.6}}
-.nav-right{display:flex;align-items:center;gap:12px}
-.nav-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;border:1px solid var(--border);padding:5px 12px;border-radius:2px}
-.nav-badge{font-family:'JetBrains Mono',monospace;font-size:9px;background:var(--greendim);color:var(--green);border:1px solid rgba(46,204,113,0.2);padding:4px 10px;border-radius:2px;letter-spacing:0.1em;text-transform:uppercase}
+/* NAV */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 52px;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  background:rgba(9,9,14,0.85);backdrop-filter:blur(24px);
+}
+.logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:19px;
+  letter-spacing:0.1em;color:var(--text);
+  display:flex;align-items:center;gap:11px;
+}
+.logo-gem{
+  width:26px;height:26px;background:var(--a);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 16px var(--aglow);flex-shrink:0;
+}
+.logo-gem svg{width:14px;height:14px}
+.nav-r{display:flex;align-items:center;gap:10px}
+.nav-chip{
+  font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.1em;text-transform:uppercase;
+  padding:5px 13px;border-radius:99px;
+}
+.chip-live{background:rgba(64,128,112,0.12);color:var(--lo);border:1px solid rgba(64,128,112,0.2)}
+.chip-muted{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
 
-.hero{padding:60px 40px 40px;position:relative;overflow:hidden}
-.hero-glow{position:absolute;top:-150px;right:-100px;width:500px;height:500px;background:radial-gradient(circle,var(--orangeglow),transparent 65%);pointer-events:none}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--orange);letter-spacing:0.22em;text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:12px}
-.eyebrow::before{content:'';width:28px;height:1px;background:var(--orange)}
-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(56px,10vw,120px);line-height:0.88;letter-spacing:0.02em;margin-bottom:24px}
-h1 .outline{-webkit-text-stroke:1.5px var(--orange);color:transparent}
-.hero-sub{font-size:16px;font-weight:300;color:var(--mutedbr);max-width:500px;line-height:1.75;margin-bottom:32px;border-left:2px solid var(--orange);padding-left:18px}
-.feature-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:36px}
-.pill{font-family:'JetBrains Mono',monospace;font-size:10px;padding:5px 12px;border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;border:1px solid}
-.pill-o{color:var(--orange);border-color:rgba(255,92,0,0.3);background:var(--orangedim)}
-.pill-p{color:var(--purple);border-color:rgba(124,92,252,0.3);background:var(--purpledim)}
-.pill-g{color:var(--green);border-color:rgba(46,204,113,0.3);background:var(--greendim)}
-.pill-b{color:var(--blue);border-color:rgba(52,152,219,0.3);background:var(--bluedim)}
-.pill-y{color:var(--yellow);border-color:rgba(241,196,15,0.3);background:var(--yellowdim)}
+/* LANDING */
+.landing{
+  min-height:calc(100vh - 62px);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:60px 24px 80px;
+  position:relative;overflow:hidden;
+}
+.orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(120px)}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(196,168,85,0.06),transparent 65%);top:-200px;left:50%;transform:translateX(-50%)}
+.orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(72,112,192,0.04),transparent 65%);bottom:-150px;left:10%}
+.orb3{width:350px;height:350px;background:radial-gradient(circle,rgba(120,96,192,0.035),transparent 65%);bottom:-100px;right:8%}
 
-/* ── QUOTE TICKER ── */
-.quote-ticker{position:relative;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:6px;padding:18px 22px 14px;max-width:640px;overflow:hidden;min-height:80px;display:flex;flex-direction:column;justify-content:center}
-.quote-ticker::before{content:'❝';position:absolute;top:6px;right:14px;font-size:42px;color:rgba(124,92,252,0.1);font-family:serif;line-height:1;pointer-events:none}
-.quote-text{font-size:15px;font-style:italic;color:var(--text);line-height:1.65;font-weight:400;transition:opacity 0.45s ease,transform 0.45s ease;opacity:1;transform:translateY(0)}
-.quote-text.out{opacity:0;transform:translateY(-8px)}
-.quote-text.in{opacity:0;transform:translateY(8px)}
-.quote-author{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--purple);letter-spacing:0.12em;text-transform:uppercase;margin-top:7px;opacity:0.75;transition:opacity 0.45s ease}
-.quote-author.out{opacity:0}
-.quote-dots{display:flex;gap:5px;margin-top:10px}
-.qdot{width:5px;height:5px;border-radius:50%;background:var(--border);transition:background 0.3s,transform 0.3s;cursor:pointer}
-.qdot.active{background:var(--purple);transform:scale(1.35)}
+.eyebrow{
+  font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--muted2);letter-spacing:0.22em;text-transform:uppercase;
+  display:flex;align-items:center;gap:14px;margin-bottom:28px;
+  animation:fadeUp 0.6s ease both;
+}
+.eyebrow-line{width:32px;height:1px;background:linear-gradient(90deg,transparent,var(--a-dark))}
 
-.upload-wrap{padding:0 40px 60px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start}
-.upload-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:32px;position:relative;overflow:hidden}
-.upload-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--purple))}
-.card-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.06em;margin-bottom:6px}
-.card-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:24px}
+.landing-title{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(52px,8vw,96px);
+  line-height:0.92;letter-spacing:-0.025em;
+  text-align:center;margin-bottom:22px;
+  animation:fadeUp 0.7s 0.05s ease both;
+}
+.landing-title .dim{color:var(--muted2);font-weight:400}
+.landing-title .accent{color:var(--a);font-style:italic}
 
-/* subject selector only — university removed */
-.field-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;display:block;margin-bottom:6px}
-.subject-row{margin-bottom:20px}
-select{width:100%;background:var(--bg3);border:1px solid var(--borderhi);border-radius:4px;padding:10px 14px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;cursor:pointer;transition:border-color 0.2s;-webkit-appearance:none}
-select:focus{border-color:var(--orange)}
+.landing-sub{
+  font-size:16px;font-weight:300;color:var(--text2);
+  max-width:420px;text-align:center;line-height:1.8;
+  margin-bottom:52px;
+  animation:fadeUp 0.7s 0.1s ease both;
+}
 
-.dropzone{border:1.5px dashed var(--borderhi);border-radius:6px;padding:32px 20px;text-align:center;cursor:pointer;transition:all 0.25s;background:var(--bg3);position:relative;overflow:hidden;margin-bottom:16px}
-.dropzone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--orangedim),transparent 70%);opacity:0;transition:opacity 0.3s;pointer-events:none}
-.dropzone:hover,.dropzone.over{border-color:var(--orange)}.dropzone:hover::before,.dropzone.over::before{opacity:1}
-.dz-emoji{font-size:28px;margin-bottom:10px;display:block}
-.dz-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.04em;margin-bottom:4px}
-.dz-sub{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}.dz-sub b{color:var(--orange)}
+.upload-ritual{width:100%;max-width:520px;animation:fadeUp 0.7s 0.15s ease both}
+
+.field-label{
+  font-family:'DM Mono',monospace;font-size:10px;
+  color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;
+  display:block;margin-bottom:7px;
+}
+select{
+  width:100%;background:var(--bg3);
+  border:1px solid var(--borderhi);border-radius:var(--radius-sm);
+  padding:11px 14px;color:var(--text);
+  font-family:'DM Mono',monospace;font-size:11px;
+  outline:none;cursor:pointer;transition:border-color 0.2s;-webkit-appearance:none;
+}
+select:focus{border-color:var(--a-dark)}
+.subject-wrap{margin-bottom:14px}
+
+.dropzone{
+  width:100%;border:1px dashed var(--borderhi);border-radius:var(--radius);
+  padding:44px 28px;text-align:center;cursor:pointer;
+  background:var(--glass);position:relative;overflow:hidden;
+  transition:all 0.3s;backdrop-filter:blur(8px);
+}
+.dropzone::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,var(--adim),transparent 70%);
+  opacity:0;transition:opacity 0.35s;pointer-events:none;
+}
+.dropzone:hover,.dropzone.over{
+  border-color:var(--a-dark);
+  box-shadow:0 0 0 1px var(--a-dark),inset 0 1px 0 rgba(232,213,160,0.1);
+}
+.dropzone:hover::before,.dropzone.over::before{opacity:1}
+.dz-icon-wrap{
+  width:48px;height:48px;border:1px solid var(--borderhi);border-radius:12px;
+  background:var(--bg3);display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;transition:border-color 0.3s,box-shadow 0.3s;
+}
+.dropzone:hover .dz-icon-wrap,.dropzone.over .dz-icon-wrap{border-color:var(--a-dark);box-shadow:0 0 20px var(--aglow)}
+.dz-icon-wrap svg{width:22px;height:22px;stroke:var(--a);opacity:0.85}
+.dz-title{font-family:'Syne',sans-serif;font-weight:600;font-size:16px;margin-bottom:6px;letter-spacing:0.01em}
+.dz-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.04em;line-height:1.7}
+.dz-sub strong{color:var(--a);font-weight:400}
 #fileinput{display:none}
-.filelist{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-.fileitem{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:'JetBrains Mono',monospace;animation:popIn 0.2s ease}
-@keyframes popIn{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
-.ficon{color:var(--orange)}.fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fsize{color:var(--muted);font-size:10px}
-.fremove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;transition:color 0.15s;padding:2px}.fremove:hover{color:var(--red)}
 
-.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:32px;position:relative;overflow:hidden}
-.info-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--blue))}
-.how-steps{display:flex;flex-direction:column;gap:18px;margin-top:8px}
-.hstep{display:flex;align-items:flex-start;gap:14px}
-.hstep-num{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--orange);line-height:1;min-width:32px}
-.hstep-title{font-size:13px;font-weight:600;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.04em}
-.hstep-desc{font-size:12px;color:var(--mutedbr);line-height:1.6}
-.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-top:20px}
-.feat{background:var(--bg3);padding:14px;text-align:center}
-.feat-icon{font-size:18px;margin-bottom:5px;display:block}
-.feat-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mutedbr);letter-spacing:0.1em;text-transform:uppercase}
+.filelist{display:flex;flex-direction:column;gap:5px;margin-top:14px}
+.fileitem{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 13px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-family:'DM Mono',monospace;font-size:10px;
+  animation:popIn 0.18s ease;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.97) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.fi-dot{width:6px;height:6px;border-radius:50%;background:var(--a-dark);flex-shrink:0}
+.fi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.fi-size{color:var(--muted);font-size:9px}
+.fi-rm{background:none;border:none;color:var(--muted);cursor:pointer;transition:color 0.15s;display:flex;align-items:center;padding:2px}
+.fi-rm:hover{color:var(--hi)}
+.fi-rm svg{width:12px;height:12px;stroke:currentColor}
 
-.btn{width:100%;padding:15px;background:var(--orange);color:#000;border:none;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
-.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent 50%)}
-.btn:hover:not(:disabled){background:#ff7722;transform:translateY(-1px);box-shadow:0 10px 32px var(--orangeglow)}
-.btn:disabled{opacity:0.3;cursor:not-allowed;transform:none}
-.errbox{display:none;margin-top:12px;background:var(--reddim);border:1px solid rgba(231,76,60,0.25);border-radius:4px;padding:12px 14px;font-size:12px;color:#e88;font-family:'JetBrains Mono',monospace;line-height:1.6}
+.btn-analyze{
+  width:100%;padding:15px;margin-top:14px;
+  background:var(--a);color:#09090E;border:none;border-radius:var(--radius-sm);
+  font-family:'Syne',sans-serif;font-weight:700;font-size:15px;
+  letter-spacing:0.08em;text-transform:uppercase;
+  cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;
+}
+.btn-analyze::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent 55%)}
+.btn-analyze:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 32px var(--aglow);background:#F0E0B0}
+.btn-analyze:disabled{opacity:0.22;cursor:not-allowed;transform:none;background:var(--muted)}
+
+.feature-strip{display:flex;justify-content:center;gap:16px;margin-top:20px;flex-wrap:wrap}
+.fstrip-item{
+  font-family:'DM Mono',monospace;font-size:9px;
+  color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;
+  display:flex;align-items:center;gap:5px;
+}
+.fstrip-item::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--muted);flex-shrink:0}
+
+.errbox{
+  margin-top:12px;background:var(--hidim);border:1px solid rgba(192,80,96,0.2);
+  border-radius:var(--radius-sm);padding:11px 14px;
+  font-family:'DM Mono',monospace;font-size:10px;color:#D08080;line-height:1.6;display:none;
+}
 .errbox.on{display:block}
 
-/* NAME MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,8,16,0.92);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(16px)}
+/* QUOTE */
+.quote-section{
+  width:100%;max-width:440px;margin-top:48px;padding-top:32px;
+  border-top:1px solid var(--border);
+  animation:fadeUp 0.7s 0.25s ease both;
+}
+.quote-body{
+  font-size:14px;font-style:italic;color:var(--muted2);
+  line-height:1.8;font-weight:300;min-height:44px;
+  transition:opacity 0.45s,transform 0.45s;
+}
+.quote-body.out{opacity:0;transform:translateY(-5px)}
+.quote-body.in{opacity:0;transform:translateY(5px)}
+.quote-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.quote-attr{
+  font-family:'DM Mono',monospace;font-size:9px;
+  color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;
+  transition:opacity 0.4s;
+}
+.quote-attr.out{opacity:0}
+.quote-dots{display:flex;gap:5px}
+.qdot{width:4px;height:4px;border-radius:50%;background:var(--border);transition:all 0.3s;cursor:pointer}
+.qdot.active{background:var(--a-dark);transform:scale(1.6)}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(9,9,14,0.88);
+  z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(24px);
+}
 .modal-overlay.on{display:flex}
-.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:40px;max-width:400px;width:90%;text-align:center;position:relative}
-.modal-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--purple))}
-.modal-logo{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:0.1em;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px}
-.modal-sub{font-size:13px;color:var(--mutedbr);margin-bottom:24px;line-height:1.6}
-.modal-input{width:100%;background:var(--bg3);border:1px solid var(--borderhi);border-radius:6px;padding:13px 16px;color:var(--text);font-family:'Barlow',sans-serif;font-size:16px;font-weight:500;outline:none;transition:border-color 0.2s;text-align:center;margin-bottom:12px}
-.modal-input:focus{border-color:var(--orange)}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--borderhi);border-radius:16px;
+  padding:44px;max-width:380px;width:90%;text-align:center;position:relative;
+  box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.04);
+}
+.modal-box::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--a-dark) 40%,var(--lo) 70%,transparent);
+  border-radius:16px 16px 0 0;
+}
+.modal-logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:22px;
+  letter-spacing:0.1em;margin-bottom:8px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.7;font-weight:300}
+.modal-input{
+  width:100%;background:var(--bg3);border:1px solid var(--borderhi);
+  border-radius:var(--radius-sm);padding:13px 16px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:16px;outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;text-align:center;margin-bottom:12px;
+}
+.modal-input:focus{border-color:var(--a-dark);box-shadow:0 0 0 3px rgba(196,168,85,0.08)}
 .modal-input::placeholder{color:var(--muted)}
-.modal-btn{width:100%;padding:13px;background:var(--orange);color:#000;border:none;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s}
-.modal-btn:hover{background:#ff7722;transform:translateY(-1px)}
-.modal-hint{font-size:10px;color:var(--muted);margin-top:10px;font-family:'JetBrains Mono',monospace}
+.modal-btn{
+  width:100%;padding:13px;background:var(--a);color:#09090E;border:none;
+  border-radius:var(--radius-sm);font-family:'Syne',sans-serif;font-weight:700;
+  font-size:15px;letter-spacing:0.08em;text-transform:uppercase;
+  cursor:pointer;transition:all 0.2s;
+}
+.modal-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px var(--aglow)}
+.modal-hint{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:12px;letter-spacing:0.06em}
 
 /* LOADING */
-.loading-overlay{display:none;position:fixed;inset:0;background:rgba(8,8,16,0.96);z-index:200;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center}
+.loading-overlay{
+  display:none;position:fixed;inset:0;background:rgba(9,9,14,0.97);
+  z-index:200;flex-direction:column;align-items:center;justify-content:center;
+  gap:22px;text-align:center;
+}
 .loading-overlay.on{display:flex}
-.load-orb{width:64px;height:64px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--orange);border-right-color:var(--purple);animation:spin 1s linear infinite;position:relative}
-.load-orb::after{content:'';position:absolute;inset:8px;border-radius:50%;border:1px solid var(--border);border-bottom-color:var(--orange2);animation:spin 0.6s linear infinite reverse}
+.load-ring{
+  width:52px;height:52px;border-radius:50%;
+  border:1.5px solid var(--border);
+  border-top-color:var(--a);border-right-color:var(--lo);
+  animation:spin 1s linear infinite;position:relative;
+}
+.load-ring::after{
+  content:'';position:absolute;inset:8px;border-radius:50%;
+  border:1px solid var(--border);border-bottom-color:var(--a-dark);
+  animation:spin 0.55s linear infinite reverse;
+}
 @keyframes spin{to{transform:rotate(360deg)}}
-.load-title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:0.06em}
-.load-subtitle{font-size:12px;color:var(--mutedbr);font-family:'JetBrains Mono',monospace}
-.load-steps{display:flex;flex-direction:column;gap:8px;max-width:280px;width:100%}
-.lstep{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-align:left}
-.lstep-dot{width:6px;height:6px;border-radius:50%;background:var(--border);flex-shrink:0;transition:all 0.4s}
-.lstep.active{color:var(--text)}.lstep.active .lstep-dot{background:var(--orange);box-shadow:0 0 10px var(--orange)}
-.lstep.done .lstep-dot{background:var(--green)}
-.load-progress{width:260px;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
-.load-bar{height:100%;background:linear-gradient(90deg,var(--orange),var(--purple));width:0%;transition:width 0.5s ease}
-.load-hype{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.1em;color:var(--orange);min-height:30px;opacity:0;transform:translateY(6px);transition:opacity 0.6s ease,transform 0.6s ease;text-shadow:0 0 20px var(--orangeglow)}
+.load-title{font-family:'Syne',sans-serif;font-weight:700;font-size:22px;letter-spacing:0.04em}
+.load-for{font-family:'DM Mono',monospace;font-size:10px;color:var(--a-dark);letter-spacing:0.08em;margin-top:-12px}
+.load-steps{display:flex;flex-direction:column;gap:7px;max-width:240px;width:100%}
+.lstep{display:flex;align-items:center;gap:10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:left;letter-spacing:0.04em}
+.lstep-dot{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0;transition:all 0.4s}
+.lstep.active{color:var(--text2)}.lstep.active .lstep-dot{background:var(--a-dark);box-shadow:0 0 8px var(--aglow)}
+.lstep.done .lstep-dot{background:var(--lo)}
+.load-bar-wrap{width:220px;height:1px;background:var(--border);border-radius:1px;overflow:hidden}
+.load-bar{height:100%;background:linear-gradient(90deg,var(--a-dark),var(--lo));width:0%;transition:width 0.5s ease}
+.load-hype{
+  font-family:'DM Sans',sans-serif;font-size:14px;font-style:italic;font-weight:300;
+  color:var(--muted2);min-height:22px;
+  opacity:0;transform:translateY(4px);transition:opacity 0.55s,transform 0.55s;
+}
 .load-hype.show{opacity:1;transform:translateY(0)}
 
 /* RESULTS */
-.results{display:none;padding:0 40px 80px}.results.on{display:block}
-.tabs-wrap{display:flex;border-bottom:1px solid var(--border);margin-bottom:32px;position:sticky;top:61px;z-index:50;background:rgba(8,8,16,0.95);backdrop-filter:blur(12px);padding-top:18px;overflow-x:auto}
-.tab{padding:11px 18px;font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:0.08em;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-top:none;border-left:none;border-right:none;display:flex;align-items:center;gap:6px;white-space:nowrap}
-.tab:hover{color:var(--text)}.tab.active{color:var(--orange);border-bottom-color:var(--orange)}
-.tab-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:10px;background:var(--orangedim);color:var(--orange)}
-.results-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap}
-.results-title{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:0.03em;line-height:1;margin-bottom:4px}
-.results-greeting{font-size:13px;color:var(--orange);font-family:'JetBrains Mono',monospace;margin-bottom:4px}
-.results-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
-.btn-row{display:flex;gap:10px;flex-wrap:wrap}
-.btn-sm{padding:9px 16px;background:transparent;border:1px solid var(--borderhi);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
-.btn-sm:hover{border-color:var(--orange);color:var(--orange)}
-.btn-sm.primary{background:var(--orange);color:#000;border-color:var(--orange)}.btn-sm.primary:hover{background:#ff7722}
-.stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:28px}
-.scard{background:var(--bg2);padding:14px}
-.scard-num{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;color:var(--orange);margin-bottom:3px}
-.scard-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
+.results{display:none;padding:0 52px 80px}
+.results.on{display:block}
+.results-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;padding:36px 0 28px;flex-wrap:wrap;
+}
+.rh-greet{font-family:'DM Mono',monospace;font-size:10px;color:var(--a-dark);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px}
+.rh-title{font-family:'Syne',sans-serif;font-weight:800;font-size:30px;letter-spacing:0.01em;margin-bottom:5px}
+.rh-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.04em}
+.rh-btns{display:flex;gap:8px;flex-wrap:wrap;padding-top:4px}
+.btn-sm{
+  padding:9px 16px;background:transparent;border:1px solid var(--borderhi);
+  border-radius:var(--radius-sm);color:var(--text2);
+  font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;
+  transition:all 0.2s;white-space:nowrap;letter-spacing:0.06em;
+}
+.btn-sm:hover{border-color:var(--a-dark);color:var(--a)}
+.btn-sm.primary{background:var(--a);color:#09090E;border-color:var(--a);font-weight:500}
+.btn-sm.primary:hover{background:#F0E0B0}
+
+.stat-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:28px;
+}
+.sc{background:var(--bg2);padding:18px 20px}
+.sc-num{font-family:'Syne',sans-serif;font-weight:800;font-size:34px;color:var(--a);line-height:1;margin-bottom:5px}
+.sc-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
+
+.tabs-wrap{
+  display:flex;border-bottom:1px solid var(--border);margin-bottom:28px;
+  position:sticky;top:62px;z-index:50;
+  background:rgba(9,9,14,0.95);backdrop-filter:blur(16px);
+  padding-top:14px;overflow-x:auto;gap:2px;scrollbar-width:none;
+}
+.tabs-wrap::-webkit-scrollbar{display:none}
+.tab{
+  padding:10px 20px;font-family:'DM Mono',monospace;font-size:10px;
+  letter-spacing:0.1em;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.2s;
+  background:none;border-top:none;border-left:none;border-right:none;
+  display:flex;align-items:center;gap:7px;white-space:nowrap;text-transform:uppercase;
+}
+.tab:hover{color:var(--text2)}.tab.active{color:var(--a);border-bottom-color:var(--a-dark)}
+.tbadge{font-size:9px;padding:2px 6px;border-radius:99px;background:var(--adim);color:var(--a-dark);font-family:'DM Mono',monospace}
 .tab-panel{display:none}.tab-panel.active{display:block}
 
 /* CLUSTERS */
-.clusters{display:flex;flex-direction:column;gap:10px}
-.ccard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:border-color 0.2s;animation:slideUp 0.3s ease both}
-@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.clusters{display:flex;flex-direction:column;gap:7px}
+.ccard{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;transition:border-color 0.2s;animation:slideUp 0.3s ease both;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .ccard:hover{border-color:var(--borderhi)}
-.ccard.HIGH{border-left:3px solid var(--red)}.ccard.MEDIUM{border-left:3px solid var(--yellow)}.ccard.LOW{border-left:3px solid var(--green)}
-.chead{display:flex;align-items:center;gap:14px;padding:14px 18px;cursor:pointer;user-select:none}
-.cfreq-wrap{display:flex;flex-direction:column;align-items:center;min-width:52px}
-.cfreq{font-family:'Bebas Neue',sans-serif;font-size:34px;line-height:1}
-.cfreq-label{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase}
-.ccard.HIGH .cfreq{color:var(--red)}.ccard.MEDIUM .cfreq{color:var(--yellow)}.ccard.LOW .cfreq{color:var(--green)}
-.cinfo{flex:1}
-.ctopic{font-size:14px;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.04em}
-.cmeta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:3px}
-.cmeta-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:2px}
-.cmeta-tag.pos{background:var(--purpledim);color:var(--purple)}
-.cmeta-tag.marks{background:var(--bluedim);color:var(--blue)}
-.cmeta-tag.consistent{background:var(--greendim);color:var(--green)}
-.cpapers{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
-.cbadge{padding:3px 8px;border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;flex-shrink:0}
-.cbadge.HIGH{background:var(--reddim);color:var(--red)}.cbadge.MEDIUM{background:var(--yellowdim);color:var(--yellow)}.cbadge.LOW{background:var(--greendim);color:var(--green)}
-.cchev{color:var(--muted);font-size:11px;transition:transform 0.2s;flex-shrink:0}
+.ccard.HIGH{border-left:2px solid var(--hi)}.ccard.MEDIUM{border-left:2px solid var(--med)}.ccard.LOW{border-left:2px solid var(--lo)}
+.chead{display:flex;align-items:center;gap:16px;padding:14px 18px;cursor:pointer;user-select:none}
+.cnum-wrap{display:flex;flex-direction:column;align-items:center;min-width:42px}
+.cnum{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;line-height:1}
+.cnum-lbl{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
+.ccard.HIGH .cnum{color:var(--hi)}.ccard.MEDIUM .cnum{color:var(--med)}.ccard.LOW .cnum{color:var(--lo)}
+.cinfo{flex:1;min-width:0}
+.ctopic{font-size:13px;font-weight:600;margin-bottom:5px;letter-spacing:0.01em}
+.cmeta{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}
+.ctag{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;letter-spacing:0.04em}
+.ctag.pos{background:var(--purpledim);color:var(--purple)}.ctag.marks{background:var(--bluedim);color:var(--blue)}.ctag.same{background:var(--lodim);color:var(--lo)}
+.cpapers{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbadge{padding:3px 9px;border-radius:99px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0}
+.cbadge.HIGH{background:var(--hidim);color:var(--hi);border:1px solid rgba(192,80,96,0.2)}
+.cbadge.MEDIUM{background:var(--meddim);color:var(--med);border:1px solid rgba(192,128,64,0.2)}
+.cbadge.LOW{background:var(--lodim);color:var(--lo);border:1px solid rgba(64,128,112,0.2)}
+.cchev{color:var(--muted);transition:transform 0.2s;flex-shrink:0;display:flex;align-items:center}
+.cchev svg{width:12px;height:12px;stroke:currentColor}
 .ccard.open .cchev{transform:rotate(90deg)}
 .cbody{display:none;padding:0 18px 18px;border-top:1px solid var(--border)}.ccard.open .cbody{display:block}
-.pattern-note{background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:4px;padding:7px 12px;margin:10px 0;font-size:11px;color:var(--purple);font-family:'JetBrains Mono',monospace}
-.ctip{display:flex;gap:8px;align-items:flex-start;background:var(--orangedim);border:1px solid rgba(255,92,0,0.18);border-radius:4px;padding:9px 12px;margin:6px 0;font-size:12px;line-height:1.6;font-style:italic;color:var(--orange2)}
+.cpnote{background:var(--purpledim);border:1px solid rgba(120,96,192,0.15);border-radius:var(--radius-sm);padding:8px 12px;margin:12px 0 8px;font-size:11px;color:var(--purple);font-family:'DM Mono',monospace}
+.ctip{display:flex;gap:8px;align-items:flex-start;background:var(--adim);border:1px solid rgba(196,168,85,0.12);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:12px;font-size:12px;line-height:1.7;color:var(--a);font-weight:300}
+.ctip svg{width:13px;height:13px;stroke:currentColor;flex-shrink:0;margin-top:2px;opacity:0.7}
 .qlist{display:flex;flex-direction:column;gap:6px}
-.qitem{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:11px 13px}
-.qitem-head{display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap}
-.qtag{display:inline-block;background:var(--bg4);border:1px solid var(--border);border-radius:2px;padding:2px 7px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)}
-.qpos{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:2px;background:var(--purpledim);color:var(--purple)}
-.qmarks{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 7px;border-radius:2px;background:var(--bluedim);color:var(--blue)}
-.qtext{font-size:13px;line-height:1.65}
+.qitem{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.qitem-head{display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.qtag{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--bg4);border:1px solid var(--border);color:var(--muted2)}
+.qpos{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--purpledim);color:var(--purple)}
+.qmarks{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:3px;background:var(--bluedim);color:var(--blue)}
+.qtext{font-size:13px;line-height:1.7;color:var(--text2);font-weight:300}
 
 /* PREDICTIONS */
-.pred-grid{display:flex;flex-direction:column;gap:10px}
-.pcard{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:18px;animation:slideUp 0.3s ease both;position:relative;overflow:hidden}
-.pcard::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px}
-.pcard.HIGH::before{background:var(--red)}.pcard.MEDIUM::before{background:var(--yellow)}.pcard.LOW::before{background:var(--green)}
-.pcard-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
-.pcard-num{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--muted);line-height:1;min-width:28px}
-.pcard-q{font-size:14px;font-weight:600;line-height:1.6;flex:1}
-.pcard-meta{display:flex;flex-wrap:wrap;gap:6px}
-.pmeta-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;letter-spacing:0.08em;text-transform:uppercase}
-.pmeta-tag.conf-HIGH{background:var(--reddim);color:var(--red)}.pmeta-tag.conf-MEDIUM{background:var(--yellowdim);color:var(--yellow)}.pmeta-tag.conf-LOW{background:var(--greendim);color:var(--green)}
-.pmeta-tag.pos-tag{background:var(--purpledim);color:var(--purple)}
-.pmeta-tag.marks-tag{background:var(--bluedim);color:var(--blue)}
-.pmeta-tag.topic-tag{background:var(--orangedim);color:var(--orange)}
-.preason{font-size:11px;color:var(--mutedbr);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic;font-family:'JetBrains Mono',monospace}
+.pred-note{background:var(--purpledim);border:1px solid rgba(120,96,192,0.15);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:20px;font-size:11px;color:var(--purple);font-family:'DM Mono',monospace;line-height:1.7}
+.pred-grid{display:flex;flex-direction:column;gap:7px}
+.pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;animation:slideUp 0.3s ease both;position:relative;overflow:hidden}
+.pcard::before{content:'';position:absolute;top:0;left:0;bottom:0;width:2px}
+.pcard.HIGH::before{background:var(--hi)}.pcard.MEDIUM::before{background:var(--med)}.pcard.LOW::before{background:var(--lo)}
+.pcard-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px}
+.pcard-n{font-family:'DM Mono',monospace;font-size:18px;color:var(--muted);line-height:1;min-width:28px}
+.pcard-q{font-size:13px;font-weight:500;line-height:1.7;flex:1;color:var(--text2)}
+.pmeta{display:flex;flex-wrap:wrap;gap:5px}
+.ptag{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px;letter-spacing:0.06em;text-transform:uppercase}
+.ptag.c-HIGH{background:var(--hidim);color:var(--hi)}.ptag.c-MEDIUM{background:var(--meddim);color:var(--med)}.ptag.c-LOW{background:var(--lodim);color:var(--lo)}
+.ptag.pos{background:var(--purpledim);color:var(--purple)}.ptag.marks{background:var(--bluedim);color:var(--blue)}.ptag.topic{background:var(--adim);color:var(--a-dark)}.ptag.seen{background:var(--lodim);color:var(--lo)}
+.preason{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted2);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-style:italic}
 
-/* LAST HOUR PREP */
-.lhp-header{background:var(--bg2);border:1px solid rgba(231,76,60,0.3);border-left:3px solid var(--red);border-radius:8px;padding:22px;margin-bottom:22px}
-.lhp-message{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.06em;color:var(--red);margin-bottom:10px}
-.lhp-strategy{font-size:13px;color:var(--mutedbr);line-height:1.7;padding:10px 14px;background:var(--reddim);border-radius:4px;border:1px solid rgba(231,76,60,0.15);font-family:'JetBrains Mono',monospace}
-.lhp-grid{display:flex;flex-direction:column;gap:12px}
-.lhp-card{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;animation:slideUp 0.3s ease both;position:relative}
-.lhp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--orange))}
-.lhp-rank{font-family:'Bebas Neue',sans-serif;font-size:13px;color:var(--red);letter-spacing:0.1em;padding:12px 16px 0;text-transform:uppercase}
-.lhp-topic{font-size:15px;font-weight:700;padding:4px 16px 0;text-transform:uppercase;letter-spacing:0.04em}
-.lhp-q{font-size:13px;padding:8px 16px;color:var(--mutedbr);line-height:1.6;border-bottom:1px solid var(--border);font-style:italic}
-.lhp-meta{display:flex;gap:8px;padding:10px 16px;flex-wrap:wrap;align-items:flex-start}
-.lhp-why{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--reddim);color:var(--red)}
-.lhp-pos{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--purpledim);color:var(--purple)}
-.lhp-marks{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;background:var(--bluedim);color:var(--blue)}
-.lhp-tip{display:flex;gap:8px;align-items:flex-start;background:var(--orangedim);border:1px solid rgba(255,92,0,0.18);border-radius:0 0 6px 6px;padding:10px 16px;font-size:12px;line-height:1.6;color:var(--orange2)}
+/* LAST HOUR */
+.lhp-header{background:var(--bg2);border:1px solid var(--borderhi);border-left:2px solid var(--hi);border-radius:var(--radius);padding:24px;margin-bottom:18px}
+.lhp-msg{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--hi);margin-bottom:10px;letter-spacing:0.01em}
+.lhp-strat{font-family:'DM Mono',monospace;font-size:11px;background:var(--hidim);border:1px solid rgba(192,80,96,0.12);border-radius:var(--radius-sm);padding:11px 14px;color:var(--text2);line-height:1.75}
+.lhp-grid{display:flex;flex-direction:column;gap:8px}
+.lhp-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;animation:slideUp 0.3s ease both;position:relative}
+.lhp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--hi),var(--med))}
+.lhp-rank{font-family:'DM Mono',monospace;font-size:9px;color:var(--hi);letter-spacing:0.14em;padding:13px 16px 0;text-transform:uppercase}
+.lhp-topic{font-size:14px;font-weight:600;padding:4px 16px;letter-spacing:0.01em}
+.lhp-q{font-size:12px;padding:6px 16px 12px;color:var(--text2);line-height:1.7;border-bottom:1px solid var(--border);font-style:italic;font-weight:300}
+.lhp-meta{display:flex;gap:7px;padding:10px 16px;flex-wrap:wrap}
+.lhp-tag{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:4px}
+.lhp-why{background:var(--hidim);color:var(--hi)}.lhp-pos{background:var(--purpledim);color:var(--purple)}.lhp-marks{background:var(--bluedim);color:var(--blue)}
+.lhp-tip{display:flex;gap:8px;align-items:flex-start;background:var(--adim);border-top:1px solid var(--border);padding:10px 16px;font-size:12px;line-height:1.7;color:var(--a);font-weight:300;font-style:italic}
 
-/* PAPER STRATEGY */
-.strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.strat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:20px;position:relative;overflow:hidden}
-.strat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+/* STRATEGY */
+.strat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.strat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;position:relative;overflow:hidden}
+.strat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px}
 .strat-card.blue::before{background:linear-gradient(90deg,var(--blue),var(--purple))}
-.strat-card.orange::before{background:linear-gradient(90deg,var(--orange),var(--yellow))}
-.strat-card.green::before{background:linear-gradient(90deg,var(--green),var(--blue))}
-.strat-card.red::before{background:linear-gradient(90deg,var(--red),var(--orange))}
+.strat-card.amber::before{background:linear-gradient(90deg,var(--a-dark),var(--med))}
+.strat-card.teal::before{background:linear-gradient(90deg,var(--lo),var(--blue))}
+.strat-card.red::before{background:linear-gradient(90deg,var(--hi),var(--med))}
 .strat-card.full{grid-column:1/-1}
-.strat-title{font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.06em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.strat-title .icon{font-size:16px}
-
-/* donut chart */
+.strat-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.02em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .donut-wrap{display:flex;align-items:center;gap:20px}
-.donut{position:relative;width:90px;height:90px;flex-shrink:0}
+.donut{position:relative;width:84px;height:84px;flex-shrink:0}
 .donut svg{transform:rotate(-90deg)}
 .donut-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.donut-pct{font-family:'Bebas Neue',sans-serif;font-size:22px;line-height:1}
-.donut-sub{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase}
-.donut-legend{display:flex;flex-direction:column;gap:8px;flex:1}
-.dleg{display:flex;align-items:center;gap:8px;font-size:12px}
-.dleg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.dleg-label{font-size:11px;color:var(--mutedbr)}
-.dleg-count{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-left:auto}
-
-/* time bar */
-.time-bars{display:flex;flex-direction:column;gap:8px}
+.donut-pct{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;line-height:1}
+.donut-sub{font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase;margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:10px;flex:1}
+.dleg{display:flex;align-items:center;gap:8px}
+.dleg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dleg-label{font-size:11px;color:var(--text2);flex:1;font-weight:300}
+.dleg-count{font-family:'DM Mono',monospace;font-size:10px;color:var(--text)}
+.time-bars{display:flex;flex-direction:column;gap:9px}
 .tbar-row{display:flex;align-items:center;gap:10px}
-.tbar-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);min-width:80px;text-transform:uppercase}
-.tbar-track{flex:1;height:8px;background:var(--border);border-radius:99px;overflow:hidden}
-.tbar-fill{height:100%;border-radius:99px;transition:width 0.6s ease}
-.tbar-val{font-family:'JetBrains Mono',monospace;font-size:10px;min-width:36px;text-align:right}
+.tbar-label{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);min-width:86px;text-transform:uppercase;letter-spacing:0.06em}
+.tbar-track{flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+.tbar-fill{height:100%;border-radius:99px;transition:width 0.7s ease}
+.tbar-val{font-family:'DM Mono',monospace;font-size:9px;min-width:32px;text-align:right}
+.strat-text{font-size:12px;color:var(--text2);line-height:1.8;font-weight:300}
+.type-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.type-badge{font-family:'DM Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;border:1px solid}
 
-/* strategy pills */
-.strat-text{font-size:12px;color:var(--mutedbr);line-height:1.75}
-.strat-highlight{display:inline-block;padding:2px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;margin:2px 2px}
-.sh-green{background:var(--greendim);color:var(--green)}
-.sh-red{background:var(--reddim);color:var(--red)}
-.sh-orange{background:var(--orangedim);color:var(--orange)}
-.sh-blue{background:var(--bluedim);color:var(--blue)}
-.sh-yellow{background:var(--yellowdim);color:var(--yellow)}
+.reset-wrap{text-align:center;margin-top:44px}
+.reset-btn{padding:9px 24px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all 0.2s;letter-spacing:0.06em;text-transform:uppercase}
+.reset-btn:hover{color:var(--text2);border-color:var(--borderhi)}
 
-/* attempt order */
-.attempt-steps{display:flex;flex-direction:column;gap:6px;margin-top:8px}
-.astep{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:12px}
-.astep-num{font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--orange);min-width:24px}
-.astep-content{flex:1}
-.astep-tag{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;margin-left:6px}
+footer{padding:24px 52px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.foot-logo{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;letter-spacing:0.1em;color:var(--muted)}
+.foot-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.08em;margin-top:3px}
+.foot-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.04em}
 
-/* topic type badges */
-.type-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.type-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid}
-
-.reset-wrap{text-align:center;margin-top:36px}
-.reset-btn{padding:9px 22px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;transition:all 0.2s}.reset-btn:hover{color:var(--text);border-color:var(--borderhi)}
-
-footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
-.foot-logo{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.1em;color:var(--muted)}
-.foot-sub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.08em}
-.foot-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
 @media(max-width:900px){
-  .upload-wrap{grid-template-columns:1fr;padding:0 20px 40px}.hero{padding:36px 20px 28px}
-  h1{font-size:clamp(48px,13vw,80px)}nav{padding:14px 20px}.results{padding:0 20px 60px}
-  .stat-strip{grid-template-columns:repeat(2,1fr)}.feat-grid{grid-template-columns:repeat(2,1fr)}
-  footer{padding:16px 20px}.quote-ticker{max-width:100%}
+  nav{padding:14px 20px}
+  .landing{padding:48px 20px 64px}
+  .results{padding:0 20px 60px}
+  .stat-strip{grid-template-columns:repeat(2,1fr)}
+  .strat-grid{grid-template-columns:1fr}
+  .strat-card.full{grid-column:auto}
+  footer{padding:16px 20px}
+}
+@media(max-width:600px){
+  .landing-title{font-size:clamp(42px,14vw,72px)}
+  .tabs-wrap{top:54px}
 }
 </style>
 </head>
@@ -294,58 +482,62 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
 <!-- NAME MODAL -->
 <div class="modal-overlay" id="nameModal">
   <div class="modal-box">
-    <div class="modal-logo"><span class="logo-dot"></span>ASHLYSIS</div>
-    <p class="modal-sub">Enter your name to get a personalized analysis report.</p>
-    <input class="modal-input" id="nameInput" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
-    <button class="modal-btn" onclick="confirmName()">START ANALYSIS →</button>
-    <p class="modal-hint">Free forever · No account needed · Your papers stay private</p>
+    <div class="modal-logo">
+      <div class="logo-gem" style="width:28px;height:28px">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M2 11L7 2l5 9M4.5 7.5h5" stroke="#09090E" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </div>
+      ASHLYSIS
+    </div>
+    <p class="modal-sub">Enter your name to receive a personalized analysis report with your study plan.</p>
+    <input class="modal-input" id="nameInput" type="text" placeholder="Your name" maxlength="30" autocomplete="off">
+    <button class="modal-btn" onclick="confirmName()">Begin Analysis</button>
+    <p class="modal-hint">Free · No account · Your papers stay private</p>
   </div>
 </div>
 
+<!-- NAV -->
 <nav>
-  <div class="logo"><span class="logo-dot"></span>ASHLYSIS</div>
-  <div class="nav-right">
-    <span class="nav-badge">Free · No Login</span>
-    <span class="nav-tag">Exam Intelligence</span>
+  <div class="logo">
+    <div class="logo-gem">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M2 11L7 2l5 9M4.5 7.5h5" stroke="#09090E" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </div>
+    ASHLYSIS
+  </div>
+  <div class="nav-r">
+    <span class="nav-chip chip-live">Free · No Login</span>
+    <span class="nav-chip chip-muted">Exam Intelligence</span>
   </div>
 </nav>
 
-<section class="hero">
-  <div class="hero-glow"></div>
-  <div class="eyebrow">Smart PYQ Analysis</div>
-  <h1>CRACK THE<br><span class="outline">PATTERN.</span></h1>
-  <p class="hero-sub">Upload your previous year papers. ASHLYSIS finds which questions repeat, which position they appear in, how many marks — and predicts what's coming next.</p>
-  <div class="feature-pills">
-    <span class="pill pill-o">🔍 Repeat Detection</span>
-    <span class="pill pill-p">📍 Question Position</span>
-    <span class="pill pill-b">📝 Marks Pattern</span>
-    <span class="pill pill-g">🔮 Predictions</span>
-    <span class="pill pill-r" style="color:var(--red);border-color:rgba(231,76,60,0.3);background:var(--reddim)">⚡ Last Hour Prep</span>
+<!-- LANDING -->
+<section class="landing" id="uploadWrap">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <div class="eyebrow">
+    <span class="eyebrow-line"></span>
+    Mumbai University · BE Papers
+    <span class="eyebrow-line" style="background:linear-gradient(90deg,var(--a-dark),transparent)"></span>
   </div>
 
-  <!-- QUOTES -->
-  <div class="quote-ticker" id="quoteTicker">
-    <div class="quote-text" id="quoteText"></div>
-    <div class="quote-author" id="quoteAuthor"></div>
-    <div class="quote-dots" id="quoteDots"></div>
-  </div>
-</section>
+  <h1 class="landing-title">
+    Master<br>
+    <span class="accent">the</span> <span class="dim">Pattern.</span>
+  </h1>
 
-<div class="upload-wrap" id="uploadWrap">
-  <div class="upload-card">
-    <div class="card-title">Upload PYQ Papers</div>
-    <div class="card-sub">// 2–6 papers · PDF only · text or scanned</div>
+  <p class="landing-sub">Upload your previous year papers. ASHLYSIS finds what repeats, predicts what's next, and builds your exam strategy — in seconds.</p>
 
-    <!-- SUBJECT SELECTOR ONLY — university removed -->
-    <div class="subject-row">
+  <div class="upload-ritual">
+    <div class="subject-wrap">
       <label class="field-label">Subject</label>
       <select id="subjectSelect">
-        <option value="spcc">System Programming & CC</option>
-        <option value="dbms">Database Management</option>
+        <option value="spcc">System Programming &amp; Compiler Construction</option>
+        <option value="dbms">Database Management Systems</option>
         <option value="os">Operating Systems</option>
         <option value="cn">Computer Networks</option>
         <option value="mc">Mobile Computing</option>
-        <option value="dsa">Data Structures & Algo</option>
+        <option value="dsa">Data Structures &amp; Algorithms</option>
         <option value="ai">Artificial Intelligence</option>
         <option value="ml">Machine Learning</option>
         <option value="general">Other Subject</option>
@@ -353,58 +545,56 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
     </div>
 
     <div class="dropzone" id="dz" onclick="document.getElementById('fileinput').click()">
-      <span class="dz-emoji">📄</span>
-      <div class="dz-title">Drop PDF Papers Here</div>
-      <p class="dz-sub">or click to browse &nbsp;·&nbsp; <b>minimum 2, maximum 6 papers</b></p>
+      <div class="dz-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <polyline points="9 15 12 12 15 15"/>
+        </svg>
+      </div>
+      <div class="dz-title">Drop your PDF papers here</div>
+      <p class="dz-sub">or click to browse &nbsp;·&nbsp; <strong>2 to 6 papers minimum</strong></p>
     </div>
     <input type="file" id="fileinput" multiple accept=".pdf">
+
     <div class="filelist" id="filelist"></div>
-    <button class="btn" id="analyzeBtn" onclick="requestName()" disabled>ANALYZE PAPERS →</button>
+
+    <button class="btn-analyze" id="analyzeBtn" onclick="requestName()" disabled>Analyze Papers</button>
+
+    <div class="feature-strip">
+      <span class="fstrip-item">Repeat Detection</span>
+      <span class="fstrip-item">Position &amp; Marks</span>
+      <span class="fstrip-item">Predictions</span>
+      <span class="fstrip-item">Last Hour Prep</span>
+    </div>
+
     <div class="errbox" id="errbox"></div>
   </div>
 
-  <div class="info-card">
-    <div class="card-title">What You Get</div>
-    <div class="card-sub">// the smart student's edge</div>
-    <div class="how-steps">
-      <div class="hstep"><div class="hstep-num">01</div><div>
-        <div class="hstep-title">Select Your Subject</div>
-        <div class="hstep-desc">Pick your subject. ASHLYSIS knows the exact topics that repeat in Mumbai University BE papers.</div>
-      </div></div>
-      <div class="hstep"><div class="hstep-num">02</div><div>
-        <div class="hstep-title">Upload Papers</div>
-        <div class="hstep-desc">Drop 2–6 PYQ PDFs. Text or scanned — both work. More papers = better pattern detection.</div>
-      </div></div>
-      <div class="hstep"><div class="hstep-num">03</div><div>
-        <div class="hstep-title">Get Exam Intelligence</div>
-        <div class="hstep-desc">Ranked repeats with position + marks, predictions for next exam, and Last Hour Prep — 5 questions to guarantee passing.</div>
-      </div></div>
-    </div>
-    <div class="feat-grid">
-      <div class="feat"><span class="feat-icon">🔁</span><div class="feat-label">Repeats</div></div>
-      <div class="feat"><span class="feat-icon">📍</span><div class="feat-label">Position</div></div>
-      <div class="feat"><span class="feat-icon">📝</span><div class="feat-label">Marks</div></div>
-      <div class="feat"><span class="feat-icon">🔮</span><div class="feat-label">Predict</div></div>
-      <div class="feat"><span class="feat-icon">⚡</span><div class="feat-label">Last Hour</div></div>
-      <div class="feat"><span class="feat-icon">↓</span><div class="feat-label">Export</div></div>
+  <!-- Quote — quiet, understated -->
+  <div class="quote-section">
+    <div class="quote-body" id="quoteText"></div>
+    <div class="quote-footer">
+      <div class="quote-attr" id="quoteAuthor"></div>
+      <div class="quote-dots" id="quoteDots"></div>
     </div>
   </div>
-</div>
+</section>
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="load-orb"></div>
-  <div class="load-title">ANALYZING PAPERS</div>
-  <div style="font-size:12px;color:var(--orange);font-family:'JetBrains Mono',monospace" id="loadName"></div>
-  <div class="load-subtitle" id="loadSub">Reading your question papers...</div>
+  <div class="load-ring"></div>
+  <div class="load-title">Analyzing Papers</div>
+  <div class="load-for" id="loadName"></div>
   <div class="load-steps">
     <div class="lstep" id="ls1"><span class="lstep-dot"></span>Extracting questions from PDFs</div>
-    <div class="lstep" id="ls2"><span class="lstep-dot"></span>Finding repeat patterns + positions</div>
-    <div class="lstep" id="ls3"><span class="lstep-dot"></span>Analyzing marks & paper structure</div>
-    <div class="lstep" id="ls4"><span class="lstep-dot"></span>Predicting next exam questions</div>
-    <div class="lstep" id="ls5"><span class="lstep-dot"></span>Building your Last Hour Prep</div>
+    <div class="lstep" id="ls2"><span class="lstep-dot"></span>Identifying repeat patterns</div>
+    <div class="lstep" id="ls3"><span class="lstep-dot"></span>Mapping marks and positions</div>
+    <div class="lstep" id="ls4"><span class="lstep-dot"></span>Building predictive model</div>
+    <div class="lstep" id="ls5"><span class="lstep-dot"></span>Compiling Last Hour Prep</div>
   </div>
-  <div class="load-progress"><div class="load-bar" id="loadBar"></div></div>
+  <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
   <div class="load-hype" id="loadHype"></div>
 </div>
 
@@ -412,184 +602,164 @@ footer{padding:20px 40px;border-top:1px solid var(--border);display:flex;justify
 <section class="results" id="results">
   <div class="results-head">
     <div>
-      <div class="results-greeting" id="resultsGreeting"></div>
-      <div class="results-title">ANALYSIS COMPLETE</div>
-      <div class="results-meta" id="resultsMeta"></div>
+      <div class="rh-greet" id="resultsGreeting"></div>
+      <div class="rh-title">Analysis Complete</div>
+      <div class="rh-meta" id="resultsMeta"></div>
     </div>
-    <div class="btn-row">
-      <button class="btn-sm primary" onclick="exportReport()">↓ EXPORT REPORT</button>
-      <button class="btn-sm" onclick="resetApp()">← NEW ANALYSIS</button>
+    <div class="rh-btns">
+      <button class="btn-sm primary" onclick="exportReport()">Export Report</button>
+      <button class="btn-sm" onclick="resetApp()">New Analysis</button>
     </div>
   </div>
 
   <div class="stat-strip" id="statStrip"></div>
 
-  <!-- TABS -->
   <div class="tabs-wrap">
-    <button class="tab active" onclick="switchTab('repeats',this)">🔁 REPEATS <span class="tab-badge" id="tb1">0</span></button>
-    <button class="tab" onclick="switchTab('predictions',this)">🔮 PREDICTIONS <span class="tab-badge" id="tb2">0</span></button>
-    <button class="tab" onclick="switchTab('strategy',this)">✦ SPECIAL WINDOW</button>
-    <button class="tab" onclick="switchTab('lasthour',this)" style="color:var(--red)">⚡ LAST HOUR PREP</button>
+    <button class="tab active" onclick="switchTab('repeats',this)">Repeats <span class="tbadge" id="tb1">0</span></button>
+    <button class="tab" onclick="switchTab('predictions',this)">Predictions <span class="tbadge" id="tb2">0</span></button>
+    <button class="tab" onclick="switchTab('strategy',this)">Special Window</button>
+    <button class="tab" onclick="switchTab('lasthour',this)" style="color:var(--hi)">Last Hour</button>
   </div>
 
   <div class="tab-panel active" id="panel-repeats">
     <div class="clusters" id="clusterList"></div>
   </div>
-
   <div class="tab-panel" id="panel-predictions">
-    <div style="background:var(--purpledim);border:1px solid rgba(124,92,252,0.2);border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--purple);font-family:'JetBrains Mono',monospace;line-height:1.7">
-      ⚡ Predicted based on repeat frequency and rotation patterns. Includes likely question position and marks.
-    </div>
+    <div class="pred-note">Predictions based on repeat frequency and position rotation. Includes likely question slot and marks.</div>
     <div class="pred-grid" id="predList"></div>
   </div>
-
   <div class="tab-panel" id="panel-strategy">
     <div id="strategyContent"></div>
   </div>
-
   <div class="tab-panel" id="panel-lasthour">
     <div class="lhp-header" id="lhpHeader"></div>
     <div class="lhp-grid" id="lhpGrid"></div>
   </div>
 
-  <div class="reset-wrap"><button class="reset-btn" onclick="resetApp()">← Start New Analysis</button></div>
+  <div class="reset-wrap">
+    <button class="reset-btn" onclick="resetApp()">Start New Analysis</button>
+  </div>
 </section>
 
 <footer>
   <div>
     <div class="foot-logo">ASHLYSIS</div>
-    <div class="foot-sub">AN ASHMIT SINGH PRODUCTION</div>
+    <div class="foot-sub">An Ashmit Singh Production</div>
   </div>
   <span class="foot-meta">Built for engineers who study smart · Free forever · Powered by Groq AI</span>
 </footer>
 
 <script>
-let files=[], lastData=null, userName='';
+'use strict';
+let files=[],lastData=null,userName='';
 
-// ═══════════════════════════════════════════
-// QUOTES — 60s cycle
-// ═══════════════════════════════════════════
-const QUOTES = [
-  { text: "Art is never finished, only abandoned.", author: "— Leonardo da Vinci" },
-  { text: "Haar mangunga nahi, vardaan mangunga nahi.", author: "— Ramdhari Singh Dinkar" },
-  { text: "The secret of getting ahead is getting started.", author: "— Mark Twain" },
-  { text: "You don't have to be great to start, but you have to start to be great.", author: "— Zig Ziglar" },
-  { text: "Success is the sum of small efforts, repeated day in and day out.", author: "— Robert Collier" },
-  { text: "It always seems impossible until it's done.", author: "— Nelson Mandela" },
-  { text: "Don't watch the clock; do what it does. Keep going.", author: "— Sam Levenson" },
+/* ── QUOTES ── */
+const QUOTES=[
+  {text:"Art is never finished, only abandoned.",author:"Leonardo da Vinci"},
+  {text:"Haar mangunga nahi, vardaan mangunga nahi.",author:"Ramdhari Singh Dinkar"},
+  {text:"The secret of getting ahead is getting started.",author:"Mark Twain"},
+  {text:"It always seems impossible until it is done.",author:"Nelson Mandela"},
+  {text:"Discipline is choosing between what you want now and what you want most.",author:"Abraham Lincoln"},
+  {text:"Success is the sum of small efforts, repeated day in and day out.",author:"Robert Collier"},
+  {text:"Don't watch the clock. Do what it does — keep going.",author:"Sam Levenson"},
 ];
-let qIdx = 0, qTimer = null;
-
-function initQuotes() {
-  const dotsEl = document.getElementById('quoteDots');
-  dotsEl.innerHTML = QUOTES.map((_,i) => `<span class="qdot${i===0?' active':''}" id="qd${i}" onclick="jumpQuote(${i})"></span>`).join('');
-  document.getElementById('quoteText').textContent = QUOTES[0].text;
-  document.getElementById('quoteAuthor').textContent = QUOTES[0].author;
-  qTimer = setInterval(cycleQuote, 60000);
+let qIdx=0,qTimer=null;
+function initQuotes(){
+  const d=document.getElementById('quoteDots');
+  d.innerHTML=QUOTES.map((_,i)=>`<span class="qdot${i===0?' active':''}" id="qd${i}" onclick="jumpQuote(${i})"></span>`).join('');
+  document.getElementById('quoteText').textContent=QUOTES[0].text;
+  document.getElementById('quoteAuthor').textContent='— '+QUOTES[0].author;
+  qTimer=setInterval(cycleQuote,60000);
 }
-
-function cycleQuote() {
-  const tEl = document.getElementById('quoteText');
-  const aEl = document.getElementById('quoteAuthor');
-  tEl.classList.add('out'); aEl.classList.add('out');
-  setTimeout(() => {
+function cycleQuote(){
+  const tEl=document.getElementById('quoteText'),aEl=document.getElementById('quoteAuthor');
+  tEl.classList.add('out');aEl.classList.add('out');
+  setTimeout(()=>{
     document.getElementById('qd'+qIdx).classList.remove('active');
-    qIdx = (qIdx + 1) % QUOTES.length;
+    qIdx=(qIdx+1)%QUOTES.length;
     document.getElementById('qd'+qIdx).classList.add('active');
-    tEl.classList.remove('out'); tEl.classList.add('in');
-    aEl.classList.remove('out'); aEl.classList.add('in');
-    tEl.textContent = QUOTES[qIdx].text;
-    aEl.textContent = QUOTES[qIdx].author;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      tEl.classList.remove('in'); aEl.classList.remove('in');
-    }));
-  }, 460);
+    tEl.textContent=QUOTES[qIdx].text;aEl.textContent='— '+QUOTES[qIdx].author;
+    tEl.classList.remove('out');tEl.classList.add('in');aEl.classList.remove('out');aEl.classList.add('in');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{tEl.classList.remove('in');aEl.classList.remove('in')}));
+  },450);
 }
-
-function jumpQuote(i) {
+function jumpQuote(i){
   clearInterval(qTimer);
-  const tEl = document.getElementById('quoteText');
-  const aEl = document.getElementById('quoteAuthor');
-  tEl.classList.add('out'); aEl.classList.add('out');
-  setTimeout(() => {
+  const tEl=document.getElementById('quoteText'),aEl=document.getElementById('quoteAuthor');
+  tEl.classList.add('out');aEl.classList.add('out');
+  setTimeout(()=>{
     document.getElementById('qd'+qIdx).classList.remove('active');
-    qIdx = i;
-    document.getElementById('qd'+qIdx).classList.add('active');
-    tEl.classList.remove('out'); tEl.classList.add('in');
-    aEl.classList.remove('out'); aEl.classList.add('in');
-    tEl.textContent = QUOTES[qIdx].text;
-    aEl.textContent = QUOTES[qIdx].author;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      tEl.classList.remove('in'); aEl.classList.remove('in');
-    }));
-  }, 460);
-  qTimer = setInterval(cycleQuote, 60000);
+    qIdx=i;document.getElementById('qd'+qIdx).classList.add('active');
+    tEl.textContent=QUOTES[qIdx].text;aEl.textContent='— '+QUOTES[qIdx].author;
+    tEl.classList.remove('out');tEl.classList.add('in');aEl.classList.remove('out');aEl.classList.add('in');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{tEl.classList.remove('in');aEl.classList.remove('in')}));
+  },450);
+  qTimer=setInterval(cycleQuote,60000);
 }
 
-// ═══════════════════════════════════════════
-// HYPE LINES during loading
-// ═══════════════════════════════════════════
-const HYPE = [
-  "you slay, girl 💅",
-  "abki baar 8 CGPA paar 🎯",
-  "with ASHLYSIS, no KT 🚀",
-  "cheer up, mate 💪",
-  "ek baar aur padh le yaar 📚",
-  "almost there... 🔥",
+/* ── HYPE LINES ── */
+const HYPE=[
+  "You've already done the hard part.",
+  "Patterns don't lie. Trust the data.",
+  "One paper at a time. One mark at a time.",
+  "You slay, girl.",
+  "Abki baar, 8 CGPA paar.",
+  "With ASHLYSIS — no KT.",
+  "Cheer up, mate. You've got this.",
 ];
-let hypeTimer = null;
-function showHype() {
-  const el = document.getElementById('loadHype');
+let hypeTimer=null;
+function showHype(){
+  const el=document.getElementById('loadHype');
   el.classList.remove('show');
-  setTimeout(() => { el.textContent = HYPE[Math.floor(Math.random()*HYPE.length)]; el.classList.add('show'); }, 400);
+  setTimeout(()=>{el.textContent=HYPE[Math.floor(Math.random()*HYPE.length)];el.classList.add('show')},400);
 }
-function startHype() { showHype(); hypeTimer = setInterval(showHype, 4000); }
-function stopHype() { clearInterval(hypeTimer); hypeTimer = null; document.getElementById('loadHype').classList.remove('show'); }
+function startHype(){showHype();hypeTimer=setInterval(showHype,4500)}
+function stopHype(){clearInterval(hypeTimer);document.getElementById('loadHype').classList.remove('show')}
 
-// ═══════════════════════════════════════════
-// DRAG & DROP
-// ═══════════════════════════════════════════
-const dz = document.getElementById('dz');
-dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
-dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.pdf')))});
-document.getElementById('fileinput').addEventListener('change', e=>{addFiles(Array.from(e.target.files));e.target.value=''});
+/* ── FILES ── */
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.pdf')))});
+document.getElementById('fileinput').addEventListener('change',e=>{addFiles(Array.from(e.target.files));e.target.value=''});
 function addFiles(nf){nf.forEach(f=>{if(!files.find(x=>x.name===f.name))files.push(f)});renderFiles();updateBtn()}
 function removeFile(i){files.splice(i,1);renderFiles();updateBtn()}
 function renderFiles(){
   document.getElementById('filelist').innerHTML=files.map((f,i)=>`
-    <div class="fileitem"><span class="ficon">◈</span><span class="fname">${f.name}</span>
-    <span class="fsize">${(f.size/1024).toFixed(0)}KB</span>
-    <button class="fremove" onclick="removeFile(${i})">✕</button></div>`).join('');
+    <div class="fileitem">
+      <span class="fi-dot"></span>
+      <span class="fi-name">${f.name}</span>
+      <span class="fi-size">${(f.size/1024).toFixed(0)} KB</span>
+      <button class="fi-rm" onclick="removeFile(${i})" title="Remove">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`).join('');
 }
 function updateBtn(){document.getElementById('analyzeBtn').disabled=files.length<2}
 
-// ── NAME MODAL ──
+/* ── MODAL ── */
 function requestName(){hideErr();document.getElementById('nameModal').classList.add('on');setTimeout(()=>document.getElementById('nameInput').focus(),100)}
 document.getElementById('nameInput').addEventListener('keypress',e=>{if(e.key==='Enter')confirmName()});
 function confirmName(){
   const val=document.getElementById('nameInput').value.trim();
-  if(!val){document.getElementById('nameInput').style.borderColor='var(--red)';return}
+  if(!val){document.getElementById('nameInput').style.borderColor='var(--hi)';return}
   userName=val;document.getElementById('nameModal').classList.remove('on');startAnalysis();
 }
 
-// ── ANALYZE ──
+/* ── ANALYZE ── */
 async function startAnalysis(){
   showLoading();
   const steps=['ls1','ls2','ls3','ls4','ls5'];
-  const subs=['Reading your question papers...','Finding repeat patterns & positions...','Analyzing marks & paper structure...','Predicting exam questions...','Building Last Hour Prep...'];
   const progs=[10,30,55,75,90];
   let si=0;
   const iv=setInterval(()=>{
     if(si>0){document.getElementById(steps[si-1]).classList.remove('active');document.getElementById(steps[si-1]).classList.add('done')}
-    if(si<steps.length){document.getElementById(steps[si]).classList.add('active');document.getElementById('loadSub').textContent=subs[si];document.getElementById('loadBar').style.width=progs[si]+'%';si++}
+    if(si<steps.length){document.getElementById(steps[si]).classList.add('active');document.getElementById('loadBar').style.width=progs[si]+'%';si++}
   },2500);
-
   const fd=new FormData();
   files.forEach(f=>fd.append('files',f));
   fd.append('user_name',userName);
   fd.append('subject',document.getElementById('subjectSelect').value);
-
   try{
     const res=await fetch('/analyze',{method:'POST',body:fd});
     clearInterval(iv);
@@ -598,56 +768,49 @@ async function startAnalysis(){
     if(!res.ok){showErr(data.error||'Something went wrong.');hideLoading();return}
     lastData=data;
     await new Promise(r=>setTimeout(r,400));
-    hideLoading();
-    showResults(data);
+    hideLoading();showResults(data);
   }catch(e){clearInterval(iv);showErr('Network error. Please try again.');hideLoading()}
 }
 
-// ── SHOW RESULTS ──
+/* ── RESULTS ── */
 function showResults(data){
   const{clusters,predictions,last_hour_prep,paper_strategy,stats,user_name,subject,ocr_used}=data;
-
-  document.getElementById('resultsGreeting').textContent=`Hey ${user_name} 👋 — ${subject} analysis complete`;
-  const ocrNote=ocr_used?.length?` · 🔍 OCR used`:'';
-  document.getElementById('resultsMeta').textContent=`${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions.length} predictions${ocrNote}`;
-
+  document.getElementById('resultsGreeting').textContent=`${user_name} — ${subject}`;
+  document.getElementById('resultsMeta').textContent=`${stats.papers} papers · ${stats.clusters} repeat clusters · ${predictions.length} predictions${ocr_used?.length?' · OCR applied':''}`;
   document.getElementById('statStrip').innerHTML=[
-    [stats.papers,'Papers'],
-    [stats.clusters,'Repeats'],
-    [stats.high_priority,'HIGH Priority'],
-    [predictions.length,'Predictions'],
-  ].map(([n,l])=>`<div class="scard"><div class="scard-num">${n}</div><div class="scard-lbl">${l}</div></div>`).join('');
+    [stats.papers,'Papers'],[stats.clusters,'Repeats'],
+    [stats.high_priority,'High Priority'],[predictions.length,'Predictions'],
+  ].map(([n,l])=>`<div class="sc"><div class="sc-num">${n}</div><div class="sc-lbl">${l}</div></div>`).join('');
+  document.getElementById('tb1').textContent=clusters.length;
+  document.getElementById('tb2').textContent=predictions.length;
 
-  document.getElementById('tb1').textContent = clusters.length;
-  document.getElementById('tb2').textContent = predictions.length;
-
-  // ── REPEATS ──
+  /* Repeats */
   document.getElementById('clusterList').innerHTML=clusters.map((c,i)=>{
-    const pos=c.question_positions||[], marks=c.marks_each_time||[], papers=c.papers||[];
-    return`<div class="ccard ${c.importance}" id="cc${i}" style="animation-delay:${i*0.04}s">
+    const pos=c.question_positions||[],marks=c.marks_each_time||[],papers=c.papers||[];
+    return`<div class="ccard ${c.importance}" id="cc${i}" style="animation-delay:${i*0.035}s">
       <div class="chead" onclick="tog('cc${i}')">
-        <div class="cfreq-wrap"><div class="cfreq">${c.frequency}</div><div class="cfreq-label">times</div></div>
+        <div class="cnum-wrap"><div class="cnum">${c.frequency}</div><div class="cnum-lbl">times</div></div>
         <div class="cinfo">
           <div class="ctopic">${c.topic}</div>
           <div class="cmeta">
-            ${pos.length?`<span class="cmeta-tag pos">📍 ${[...new Set(pos)].join(', ')}${c.consistent_position?' ✓':''}</span>`:''}
-            ${marks.filter(m=>m>0).length?`<span class="cmeta-tag marks">📝 ${[...new Set(marks.filter(m=>m>0))].join('/')} marks${c.consistent_marks?' ✓':''}</span>`:''}
-            ${c.consistent_position?`<span class="cmeta-tag consistent">Always same position</span>`:''}
+            ${pos.length?`<span class="ctag pos">${[...new Set(pos)].join(', ')}${c.consistent_position?' ✓':''}</span>`:''}
+            ${marks.filter(m=>m>0).length?`<span class="ctag marks">${[...new Set(marks.filter(m=>m>0))].join('/')}m${c.consistent_marks?' ✓':''}</span>`:''}
+            ${c.consistent_position?`<span class="ctag same">Same pos every year</span>`:''}
           </div>
-          <div class="cpapers">📄 ${papers.join(' · ')}</div>
+          <div class="cpapers">${papers.join(' · ')}</div>
         </div>
         <span class="cbadge ${c.importance}">${c.importance}</span>
-        <span class="cchev">▶</span>
+        <span class="cchev"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
       </div>
       <div class="cbody">
-        ${c.pattern_note?`<div class="pattern-note">📊 ${c.pattern_note}</div>`:''}
-        ${c.tip?`<div class="ctip"><span>💡</span><span>${c.tip}</span></div>`:''}
+        ${c.pattern_note?`<div class="cpnote">${c.pattern_note}</div>`:''}
+        ${c.tip?`<div class="ctip"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${c.tip}</span></div>`:''}
         <div class="qlist">${(c.questions||[]).map((q,qi)=>`
           <div class="qitem">
             <div class="qitem-head">
-              <span class="qtag">${papers[qi]||'PAPER '+(qi+1)}</span>
-              ${pos[qi]?`<span class="qpos">📍 ${pos[qi]}</span>`:''}
-              ${marks[qi]&&marks[qi]>0?`<span class="qmarks">📝 ${marks[qi]}m</span>`:''}
+              <span class="qtag">${papers[qi]||'Paper '+(qi+1)}</span>
+              ${pos[qi]?`<span class="qpos">${pos[qi]}</span>`:''}
+              ${marks[qi]&&marks[qi]>0?`<span class="qmarks">${marks[qi]}m</span>`:''}
             </div>
             <div class="qtext">${q}</div>
           </div>`).join('')}
@@ -656,331 +819,152 @@ function showResults(data){
     </div>`;
   }).join('');
 
-  // ── PREDICTIONS ──
-  if(Array.isArray(predictions) && predictions.length > 0){
-    document.getElementById('predList').innerHTML=predictions.map((p,i)=>`
-      <div class="pcard ${p.confidence||'MEDIUM'}" style="animation-delay:${i*0.04}s">
-        <div class="pcard-top"><div class="pcard-num">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question||p.topic}</div></div>
-        <div class="pcard-meta">
-          <span class="pmeta-tag conf-${p.confidence||'MEDIUM'}">${p.confidence||'MEDIUM'}</span>
-          ${p.likely_position?`<span class="pmeta-tag pos-tag">📍 ${p.likely_position}</span>`:''}
-          ${p.likely_marks?`<span class="pmeta-tag marks-tag">📝 ~${p.likely_marks}m</span>`:''}
-          ${p.topic?`<span class="pmeta-tag topic-tag">${p.topic}</span>`:''}
-          ${p.frequency?`<span class="pmeta-tag" style="background:var(--greendim);color:var(--green)">Seen ${p.frequency}×</span>`:''}
+  /* Predictions */
+  document.getElementById('predList').innerHTML=Array.isArray(predictions)&&predictions.length
+    ?predictions.map((p,i)=>`
+      <div class="pcard ${p.confidence||'MEDIUM'}" style="animation-delay:${i*0.035}s">
+        <div class="pcard-top"><div class="pcard-n">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question||p.topic}</div></div>
+        <div class="pmeta">
+          <span class="ptag c-${p.confidence||'MEDIUM'}">${p.confidence||'MEDIUM'}</span>
+          ${p.likely_position?`<span class="ptag pos">${p.likely_position}</span>`:''}
+          ${p.likely_marks?`<span class="ptag marks">~${p.likely_marks}m</span>`:''}
+          ${p.topic?`<span class="ptag topic">${p.topic}</span>`:''}
+          ${p.frequency?`<span class="ptag seen">Seen ${p.frequency}×</span>`:''}
         </div>
-        ${p.reason?`<div class="preason">Why → ${p.reason}</div>`:''}
-      </div>`).join('');
-  } else {
-    document.getElementById('predList').innerHTML='<p style="color:var(--muted);font-size:13px;padding:20px 0">Predictions are being generated. If this is empty, try re-analyzing.</p>';
-  }
+        ${p.reason?`<div class="preason">${p.reason}</div>`:''}
+      </div>`).join('')
+    :'<p style="color:var(--muted);font-size:12px;font-family:\'DM Mono\',monospace;padding:20px 0">No predictions generated.</p>';
 
-  // ── SPECIAL WINDOW (Paper Strategy) — always renders ──
-  showStrategy(paper_strategy || {}, subject, data);
-  document.getElementById('uploadWrap').style.display='none';
-  const lhp = last_hour_prep || {};
+  /* Strategy */
+  showStrategy(paper_strategy||{},subject,data);
+
+  /* Last Hour */
+  const lhp=last_hour_prep||{};
   document.getElementById('lhpHeader').innerHTML=`
-    <div class="lhp-message">⚡ ${lhp.message || 'Focus. You can do this.'}</div>
-    <div class="lhp-strategy">${lhp.passing_strategy || 'Attempt all of Q1 (20 marks) + any 2 from Q2-Q6 (40 marks) = 60 marks minimum passing.'}</div>`;
-  const mustDo = lhp.must_do || [];
-  document.getElementById('lhpGrid').innerHTML = mustDo.length > 0
-    ? mustDo.map((q,i)=>`
-        <div class="lhp-card" style="animation-delay:${i*0.07}s">
-          <div class="lhp-rank">#${q.rank||i+1} MUST DO</div>
-          <div class="lhp-topic">${q.topic||''}</div>
-          <div class="lhp-q">${q.question||''}</div>
-          <div class="lhp-meta">
-            ${q.why?`<span class="lhp-why">📊 ${q.why}</span>`:''}
-            ${q.position?`<span class="lhp-pos">📍 ${q.position}</span>`:''}
-            ${q.marks?`<span class="lhp-marks">📝 ${q.marks}m</span>`:''}
-          </div>
-          ${q.quick_tip?`<div class="lhp-tip"><span>💡</span><span>${q.quick_tip}</span></div>`:''}
-        </div>`).join('')
-    : '<p style="color:var(--muted);font-size:13px;padding:20px 0">Last Hour Prep questions will appear here.</p>';
+    <div class="lhp-msg">${lhp.message||'Focus. You can do this.'}</div>
+    <div class="lhp-strat">${lhp.passing_strategy||'Attempt all of Q1 (20 marks) + any 2 from Q2–Q6 (40 marks) = 60 marks minimum.'}</div>`;
+  const mustDo=lhp.must_do||[];
+  document.getElementById('lhpGrid').innerHTML=mustDo.length
+    ?mustDo.map((q,i)=>`
+      <div class="lhp-card" style="animation-delay:${i*0.06}s">
+        <div class="lhp-rank">#${q.rank||i+1} Must Do</div>
+        <div class="lhp-topic">${q.topic||''}</div>
+        ${q.question?`<div class="lhp-q">${q.question}</div>`:''}
+        <div class="lhp-meta">
+          ${q.why?`<span class="lhp-tag lhp-why">${q.why}</span>`:''}
+          ${q.position?`<span class="lhp-tag lhp-pos">${q.position}</span>`:''}
+          ${q.marks?`<span class="lhp-tag lhp-marks">${q.marks}m</span>`:''}
+        </div>
+        ${q.quick_tip?`<div class="lhp-tip">${q.quick_tip}</div>`:''}
+      </div>`).join('')
+    :'<p style="color:var(--muted);font-size:12px;font-family:\'DM Mono\',monospace;padding:20px 0">Last Hour Prep will appear here.</p>';
 
   document.getElementById('uploadWrap').style.display='none';
   document.getElementById('results').classList.add('on');
   window.scrollTo({top:0,behavior:'smooth'});
-
-  // GA event
-  if(typeof gtag !== 'undefined') gtag('event','analysis_complete',{subject:subject,papers:stats.papers,clusters:stats.clusters});
 }
 
-// ── SPECIAL WINDOW RENDERER — always renders, never empty ──
-const STRAT_DB = {
-  mc: {
-    approach: "MC is almost entirely theory + diagrams. No numerical questions. Start Q1 — architecture short notes are Q1 staples. Then pick GSM/GPRS architecture diagrams (fastest marks — draw once, label components). Mobile Terminated Call is always 10 marks and appears every year.",
-    first_attempt: "GPRS/GSM Architecture → Mobile Terminated Call → Packet Delivery",
-    avoid_first: "Snooping TCP (requires comparison table — takes time to write)",
-    quick_win: "Draw the architecture diagram first, then write labels — saves 5 minutes per question. Every MC question with a diagram gets marks even with incomplete text.",
-    type_note: "Theory-heavy — focus on diagrams and component functions",
-    num_heavy: false
-  },
-  os: {
-    approach: "OS has both theory and numericals. Start Q1 (process states, scheduling criteria). Then Disk Scheduling first from Q2-Q6 — numerical but structured, guaranteed marks if you show the calculation. Process Scheduling Gantt chart next. Leave Deadlock for last.",
-    first_attempt: "Disk Scheduling (numerical) → Process Scheduling (Gantt) → Semaphore",
-    avoid_first: "Memory management paging calculations — take longer than expected",
-    quick_win: "Q1 short notes: 20 marks in 30 minutes if you know the topics. Write 4-5 points per Q1 part.",
-    type_note: "Mixed — practice both diagram and numerical questions",
-    num_heavy: true
-  },
-  spcc: {
-    approach: "Mix of theory and numerical (assembler pass tables, parse trees). Start Q1 (definitions, assembler directives — pure theory). Then Two-pass Assembler (draw flowchart — structured, fast marks). Parser questions are numerical — tackle when warmed up.",
-    first_attempt: "Two-pass Assembler → Loader Types → Compiler Phases",
-    avoid_first: "SLR/LL(1) parse tables — calculation-heavy, time consuming under pressure",
-    quick_win: "Assembler Pass 1 vs Pass 2 comparison table — 10 marks in 10 minutes if memorized",
-    type_note: "Mixed — memorize pass tables and flowcharts",
-    num_heavy: true
-  },
-  dbms: {
-    approach: "Normalization is the most repeated topic — always 10 marks. Start Q1 (ER diagram short note, definitions). Then Normalization from Q2-Q6 — structured answer with example table. SQL queries are fast if you know them.",
-    first_attempt: "Normalization → ER Diagram → SQL Queries",
-    avoid_first: "Relational algebra — notation-heavy, easy to make errors under pressure",
-    quick_win: "1NF → 2NF → 3NF → BCNF with one example table throughout — most marks in normalization",
-    type_note: "Theory-heavy — focus on normalization steps and examples",
-    num_heavy: false
-  },
-  cn: {
-    approach: "OSI model is the backbone — always in Q1. Start Q1 (OSI 7 layers, TCP/IP comparison). Then routing algorithms (Dijkstra is numerical but structured). Error detection is mixed theory + CRC calculation.",
-    first_attempt: "OSI Model → TCP/IP → Routing Algorithms",
-    avoid_first: "Congestion control — requires understanding of multiple mechanisms simultaneously",
-    quick_win: "OSI 7 layers with function of each — 5 marks in 5 minutes if memorized as a table",
-    type_note: "Mixed — layer functions are theory, routing is numerical",
-    num_heavy: true
-  },
-  dsa: {
-    approach: "Almost all numerical — tracing algorithms, drawing trees, showing array states. Start with sorting (draw array, show each pass). Graph BFS/DFS trace is fast. Dynamic programming is hardest — save for last.",
-    first_attempt: "Sorting algorithm trace → Graph BFS/DFS → Tree operations",
-    avoid_first: "Dynamic programming — time-consuming, complex tracing for hard problems",
-    quick_win: "Quick sort: show partition step by step with pivot clearly marked — structured, easy to write",
-    type_note: "Numerical-heavy — practice tracing algorithms on paper",
-    num_heavy: true
-  },
-  ai: {
-    approach: "Mix of theory and algorithm tracing (A*, minimax tree). Start Q1 (PEAS descriptor, agent types — pure theory). Hill Climbing is structured algorithm explanation. Alpha-Beta pruning is fast to draw — show α β values at each node.",
-    first_attempt: "Hill Climbing → Planning (Partial Order) → Alpha-Beta Pruning",
-    avoid_first: "FOL Resolution — notation-heavy, easy to make errors under time pressure",
-    quick_win: "Alpha-Beta pruning on a given tree — draw tree, mark α β values at each node — 10 marks in 15 min",
-    type_note: "Theory-heavy with some algorithm tracing",
-    num_heavy: false
-  },
-  ml: {
-    approach: "Theory-heavy with some calculations. Start Q1 (definitions, types of learning). Linear/Logistic Regression next — structured derivation. Decision Tree is diagram-heavy but fast.",
-    first_attempt: "Regression → Decision Tree → Neural Network",
-    avoid_first: "SVM kernel math — complex under time pressure, easy to lose marks on derivation",
-    quick_win: "Decision tree with a small example dataset — draw tree, show information gain calculation",
-    type_note: "Theory-heavy — focus on algorithm steps and examples",
-    num_heavy: false
-  },
-  general: {
-    approach: "Attempt Q1 first (compulsory, 20 marks — always do all 4 parts). Then pick 3 from Q2-Q6 where you have most knowledge. Always attempt questions where you can draw a diagram — diagrams get marks even if text explanation is incomplete.",
-    first_attempt: "Topics you know best → diagram-heavy questions → theory questions",
-    avoid_first: "Questions requiring long calculations unless you are very confident",
-    quick_win: "Any question with a diagram — draw first and label it, then explain in 4-5 bullet points",
-    type_note: "Attempt diagram questions first for guaranteed partial marks",
-    num_heavy: false
-  }
+/* ── STRATEGY ── */
+const STRAT_DB={
+  mc:{approach:"MC is almost entirely theory and diagrams — no numerical questions. Start Q1 (architecture short notes are Q1 staples). GSM/GPRS architecture diagrams are the fastest marks available — draw once, label components. Mobile Terminated Call appears every year at 10 marks.",first_attempt:"GPRS/GSM Architecture → Mobile Terminated Call → Packet Delivery",avoid_first:"Snooping TCP — comparison table takes longer to write under pressure",quick_win:"Draw the architecture diagram first, then add labels — saves 5 minutes per question.",type_note:"Theory-heavy — focus on diagrams and component functions",num_heavy:false},
+  os:{approach:"OS has both theory and numericals. Start Q1 (process states, scheduling criteria). Then Disk Scheduling from Q2–Q6 — numerical but structured, guaranteed marks if you show the calculation. Process Scheduling Gantt chart next.",first_attempt:"Disk Scheduling → Process Scheduling (Gantt) → Semaphore",avoid_first:"Memory management paging — takes longer than expected",quick_win:"Q1 short notes: 20 marks in 30 minutes if you know the topics.",type_note:"Mixed — theory and numerical both required",num_heavy:true},
+  spcc:{approach:"Mix of theory and numerical (assembler pass tables, parse trees). Start Q1 (definitions, assembler directives — pure theory). Two-pass Assembler flowchart is structured and fast marks.",first_attempt:"Two-pass Assembler → Loader Types → Compiler Phases",avoid_first:"SLR/LL(1) parse tables — calculation-heavy under time pressure",quick_win:"Pass 1 vs Pass 2 comparison table — 10 marks in 10 minutes if memorized.",type_note:"Mixed — pass tables and flowcharts",num_heavy:true},
+  dbms:{approach:"Normalization is the most repeated topic — always 10 marks. Start Q1 (ER diagram short note, definitions). SQL queries are fast if you know syntax.",first_attempt:"Normalization → ER Diagram → SQL Queries",avoid_first:"Relational algebra — notation-heavy, easy to make errors",quick_win:"1NF → 2NF → 3NF → BCNF with one running example table throughout.",type_note:"Theory-heavy — normalization steps with examples",num_heavy:false},
+  cn:{approach:"OSI model is the backbone — always in Q1. Start with OSI 7 layers, TCP/IP comparison. Routing algorithms are numerical but structured.",first_attempt:"OSI Model → TCP/IP → Routing Algorithms",avoid_first:"Congestion control — multiple mechanisms simultaneously",quick_win:"OSI 7 layers with function of each — 5 marks in 5 minutes as a table.",type_note:"Mixed — layer theory and routing numericals",num_heavy:true},
+  dsa:{approach:"Almost all numerical — tracing algorithms, drawing trees, showing array states. Start with sorting (draw array, show each pass). Graph BFS/DFS trace is fast.",first_attempt:"Sorting trace → Graph BFS/DFS → Tree operations",avoid_first:"Dynamic programming — time-consuming tracing",quick_win:"Quick sort: show partition step by step with pivot clearly marked.",type_note:"Numerical-heavy — trace algorithms on paper",num_heavy:true},
+  ai:{approach:"Mix of theory and algorithm tracing (A*, minimax tree). Start Q1 (PEAS descriptor, agent types). Alpha-Beta pruning is fast to draw — show α β values at each node.",first_attempt:"Hill Climbing → Planning → Alpha-Beta Pruning",avoid_first:"FOL Resolution — notation-heavy under time pressure",quick_win:"Alpha-Beta pruning on a given tree — 10 marks in 15 min with node values marked clearly.",type_note:"Theory-heavy with some algorithm tracing",num_heavy:false},
+  ml:{approach:"Theory-heavy with some calculations. Start Q1 (definitions, types of learning). Linear/Logistic Regression next — structured derivation.",first_attempt:"Regression → Decision Tree → Neural Network",avoid_first:"SVM kernel math — complex derivation under pressure",quick_win:"Decision tree with a small example dataset — draw tree, show information gain calculation.",type_note:"Theory-heavy — algorithm steps and examples",num_heavy:false},
+  general:{approach:"Attempt Q1 first (compulsory, 20 marks). Pick 3 from Q2–Q6 where you have most knowledge. Diagram questions get marks even if text is incomplete.",first_attempt:"Topics you know best → diagram-heavy → theory",avoid_first:"Long calculations unless very confident",quick_win:"Any question with a diagram — draw and label first, then explain in 4–5 bullet points.",type_note:"Attempt diagram questions for guaranteed partial marks",num_heavy:false}
 };
 
-function showStrategy(ps, subjectRaw, data) {
-  const subj = (subjectRaw || 'general').toLowerCase();
-  const db = STRAT_DB[subj] || STRAT_DB['general'];
+function showStrategy(ps,subjectRaw,data){
+  const subj=(subjectRaw||'general').toLowerCase();
+  const db=STRAT_DB[subj]||STRAT_DB['general'];
+  const approach=ps.approach||db.approach;
+  const firstAttempt=ps.first_attempt||db.first_attempt;
+  const avoidFirst=ps.avoid_first||db.avoid_first;
+  const quickWin=ps.quick_win||db.quick_win;
+  const qt=ps.question_types||{};
+  const theoryPct=qt.theory_pct||(db.num_heavy?55:82);
+  const theoryCount=qt.theory||'—';
+  const numCount=qt.numerical||'—';
+  const theoryTopics=ps.high_theory_topics||[];
+  const numTopics=ps.high_numerical_topics||[];
 
-  // Merge backend data with hardcoded fallback
-  const approach     = ps.approach     || db.approach;
-  const firstAttempt = ps.first_attempt || db.first_attempt;
-  const avoidFirst   = ps.avoid_first  || db.avoid_first;
-  const quickWin     = ps.quick_win    || db.quick_win;
-
-  // Question type data from backend
-  const qt = ps.question_types || {};
-  const theoryPct  = qt.theory_pct  || (db.num_heavy ? 55 : 85);
-  const numPct     = qt.numerical_pct || (db.num_heavy ? 45 : 15);
-  const theoryCount = qt.theory   || '—';
-  const numCount    = qt.numerical || '—';
-
-  // ── Latest paper breakdown ──
-  // Find the most recent paper from clusters (papers are named Month_Year)
-  const clusters = (data && data.clusters) || [];
-  const allPapers = [...new Set(clusters.flatMap(c => c.papers || []))];
-  // Sort papers by year-month to find latest
-  function paperSortKey(name) {
-    const m = {'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,'July':7,'August':8,'September':9,'October':10,'November':11,'December':12};
-    const parts = name.split('_');
-    const yr = parseInt(parts[1]) || 0;
-    const mo = m[parts[0]] || 0;
-    return yr * 100 + mo;
+  function donut(pct,color,sublabel){
+    const r=32,cx=42,cy=42,circ=2*Math.PI*r,dash=(pct/100)*circ;
+    return`<div class="donut"><svg width="84" height="84" viewBox="0 0 84 84"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="9"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/></svg><div class="donut-label"><div class="donut-pct" style="color:${color}">${pct}%</div><div class="donut-sub">${sublabel}</div></div></div>`;
   }
-  const latestPaper = allPapers.sort((a,b) => paperSortKey(b) - paperSortKey(a))[0] || '';
-  // Get all clusters that appear in latest paper and classify them
-  const NUMERICAL_KEYWORDS = /calculate|compute|find.*cylinder|gantt|turnaround|waiting time|hit ratio|miss ratio|page fault|frame size|time quantum|fcfs|sjf|round robin|sstf|scan|c-scan|first fit|best fit|worst fit|lru|fifo|optimal.*page|\d{3,}/i;
-  let latestTheoryMarks = 0, latestNumMarks = 0;
-  const latestBreakdown = [];
-  clusters.forEach(c => {
-    const paperIdx = (c.papers || []).indexOf(latestPaper);
-    if (paperIdx === -1) return;
-    const q = (c.questions || [])[paperIdx] || '';
-    const m = (c.marks_each_time || [])[paperIdx] || 10;
-    const pos = (c.question_positions || [])[paperIdx] || '';
-    const isNum = NUMERICAL_KEYWORDS.test(q);
-    if (isNum) latestNumMarks += m; else latestTheoryMarks += m;
-    latestBreakdown.push({ topic: c.topic, marks: m, pos, isNum, q: q.slice(0, 80) });
-  });
-  const latestTotal = latestTheoryMarks + latestNumMarks;
-
-  // Topic type lists from backend
-  const theoryTopics  = (ps.high_theory_topics   || []);
-  const numTopics     = (ps.high_numerical_topics || []);
-
-  // Donut SVG
-  function donut(pct, color, sublabel) {
-    const r=34,cx=45,cy=45,circ=2*Math.PI*r,dash=(pct/100)*circ;
-    return `<div class="donut">
-      <svg width="90" height="90" viewBox="0 0 90 90">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="10"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="10"
-          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"/>
-      </svg>
-      <div class="donut-label">
-        <div class="donut-pct" style="color:${color}">${pct}%</div>
-        <div class="donut-sub">${sublabel}</div>
-      </div>
-    </div>`;
+  function tbar(label,mins,total,color){
+    const pct=Math.min(Math.round(mins/total*100),100);
+    return`<div class="tbar-row"><span class="tbar-label">${label}</span><div class="tbar-track"><div class="tbar-fill" style="width:${pct}%;background:${color}"></div></div><span class="tbar-val" style="color:${color}">${mins}m</span></div>`;
   }
 
-  // Time bar — proportional to 180
-  function tbar(label, mins, total, color) {
-    const pct = Math.min(Math.round(mins/total*100), 100);
-    return `<div class="tbar-row">
-      <span class="tbar-label">${label}</span>
-      <div class="tbar-track"><div class="tbar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <span class="tbar-val" style="color:${color}">${mins}m</span>
-    </div>`;
-  }
-
-  document.getElementById('strategyContent').innerHTML = `
+  document.getElementById('strategyContent').innerHTML=`
     <div class="strat-grid">
-
       <div class="strat-card blue">
-        <div class="strat-title"><span class="icon">📊</span>Theory vs Numerical</div>
+        <div class="strat-title">Theory vs Numerical</div>
         <div class="donut-wrap">
-          ${donut(theoryPct, 'var(--blue)', 'theory')}
+          ${donut(theoryPct,'var(--blue)','theory')}
           <div class="donut-legend">
-            <div class="dleg">
-              <span class="dleg-dot" style="background:var(--blue)"></span>
-              <span class="dleg-label">Theory / Explanation</span>
-              <span class="dleg-count" style="color:var(--blue)">${theoryCount}Q</span>
-            </div>
-            <div class="dleg">
-              <span class="dleg-dot" style="background:var(--orange)"></span>
-              <span class="dleg-label">Numerical / Calculation</span>
-              <span class="dleg-count" style="color:var(--orange)">${numCount}Q</span>
-            </div>
-            <div style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">
-              ${db.type_note}
-            </div>
+            <div class="dleg"><span class="dleg-dot" style="background:var(--blue)"></span><span class="dleg-label">Theory / Explanation</span><span class="dleg-count">${theoryCount}Q</span></div>
+            <div class="dleg"><span class="dleg-dot" style="background:var(--a-dark)"></span><span class="dleg-label">Numerical / Calculation</span><span class="dleg-count">${numCount}Q</span></div>
+            <div style="margin-top:6px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);line-height:1.6">${db.type_note}</div>
           </div>
         </div>
-        ${latestPaper && latestTotal > 0 ? `
-        <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">${latestPaper} — detected breakdown</div>
-          <div style="display:flex;gap:8px;margin-bottom:8px">
-            <div style="flex:1;background:var(--bluedim);border:1px solid rgba(52,152,219,0.2);border-radius:6px;padding:10px;text-align:center">
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--blue)">${latestTheoryMarks}m</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Theory marks</div>
-            </div>
-            <div style="flex:1;background:var(--orangedim);border:1px solid rgba(255,92,0,0.2);border-radius:6px;padding:10px;text-align:center">
-              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--orange)">${latestNumMarks}m</div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Numerical marks</div>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:4px">
-            ${latestBreakdown.slice(0,6).map(b=>`
-              <div style="display:flex;align-items:center;gap:8px;font-size:11px">
-                <span style="width:6px;height:6px;border-radius:50%;background:${b.isNum?'var(--orange)':'var(--blue)'};flex-shrink:0"></span>
-                <span style="flex:1;color:var(--mutedbr);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.topic}</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${b.isNum?'var(--orange)':'var(--blue)'}">${b.isNum?'NUM':'THY'}</span>
-                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)">${b.marks}m</span>
-              </div>`).join('')}
-          </div>
-        </div>` : ''}
       </div>
-
-      <div class="strat-card orange">
-        <div class="strat-title"><span class="icon">⏱</span>Time Allocation — 180 min</div>
+      <div class="strat-card amber">
+        <div class="strat-title">Time Allocation — 180 min</div>
         <div class="time-bars">
-          ${tbar('Reading (all Q)', 15, 180, 'var(--yellow)')}
-          ${tbar('Q1 compulsory', 30, 180, 'var(--orange)')}
-          ${tbar('Q opt ×3 each', 27, 180, 'var(--purple)')}
-          ${tbar('Revision', 24, 180, 'var(--blue)')}
-          ${tbar('Buffer', 15, 180, 'var(--green)')}
+          ${tbar('Reading',15,180,'var(--med)')}
+          ${tbar('Q1 compulsory',30,180,'var(--a-dark)')}
+          ${tbar('Optional ×3',81,180,'var(--purple)')}
+          ${tbar('Revision',24,180,'var(--blue)')}
+          ${tbar('Buffer',15,180,'var(--lo)')}
         </div>
-        <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8">
-          15 (read) + 30 (Q1) + 81 (3×Q opt) + 24 (revise) + 15 (buffer) = <strong style="color:var(--orange)">165 min</strong> used · 15 spare<br>
-          Target: <strong style="color:var(--orange)">23 min</strong> per 10-mark question &nbsp;·&nbsp; 0.44 marks/min
-        </div>
+        <div style="margin-top:12px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);line-height:1.8">Target: <span style="color:var(--a-dark)">23 min</span> per 10-mark question</div>
       </div>
-
-      <div class="strat-card green full">
-        <div class="strat-title"><span class="icon">🏛</span>Exam Hall Approach</div>
-        <div class="strat-text" style="margin-bottom:14px">${approach}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div style="background:var(--bg3);border:1px solid rgba(46,204,113,0.2);border-radius:6px;padding:12px">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✓ Attempt first</div>
-            <div style="font-size:12px;color:var(--mutedbr);line-height:1.7">${firstAttempt}</div>
+      <div class="strat-card teal full">
+        <div class="strat-title">Exam Hall Approach</div>
+        <div class="strat-text" style="margin-bottom:16px">${approach}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="background:var(--bg3);border:1px solid rgba(64,128,112,0.18);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--lo);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px">Attempt First</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.75;font-weight:300">${firstAttempt}</div>
           </div>
-          <div style="background:var(--bg3);border:1px solid rgba(231,76,60,0.2);border-radius:6px;padding:12px">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✗ Attempt last</div>
-            <div style="font-size:12px;color:var(--mutedbr);line-height:1.7">${avoidFirst}</div>
+          <div style="background:var(--bg3);border:1px solid rgba(192,80,96,0.18);border-radius:var(--radius-sm);padding:14px">
+            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--hi);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px">Attempt Last</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.75;font-weight:300">${avoidFirst}</div>
           </div>
         </div>
       </div>
-
       <div class="strat-card red full">
-        <div class="strat-title"><span class="icon">⚡</span>Quick Win — Fastest Marks</div>
+        <div class="strat-title">Fastest Marks — Quick Win</div>
         <div class="strat-text">${quickWin}</div>
       </div>
-
       <div class="strat-card blue full">
-        <div class="strat-title"><span class="icon">📋</span>Paper Format — Mumbai University BE</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${(theoryTopics.length||numTopics.length)?'14px':'0'}">
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--orange)">80</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Total Marks</div>
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--purple)">3 hrs</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Duration</div>
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--green)">Q1</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Compulsory 20m</div>
-          </div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center">
-            <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red)">3/5</div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Attempt Q2-Q6</div>
-          </div>
+        <div class="strat-title">Paper Format — Mumbai University BE</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${(theoryTopics.length||numTopics.length)?'16px':'0'}">
+          ${[['80','Total Marks','var(--a-dark)'],['3 hrs','Duration','var(--purple)'],['Q1','Compulsory 20m','var(--lo)'],['3/5','Attempt Q2–Q6','var(--hi)']].map(([v,l,c])=>`
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;text-align:center">
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:24px;color:${c};line-height:1">${v}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:5px">${l}</div>
+          </div>`).join('')}
         </div>
-        ${(theoryTopics.length || numTopics.length) ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-          ${theoryTopics.length ? `<div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Theory questions (HIGH)</div>
-            <div class="type-grid">${theoryTopics.map(t=>`<span class="type-badge" style="color:var(--blue);border-color:rgba(52,152,219,0.3);background:var(--bluedim)">${t}</span>`).join('')}</div>
-          </div>` : ''}
-          ${numTopics.length ? `<div>
-            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--orange);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Numerical questions (HIGH)</div>
-            <div class="type-grid">${numTopics.map(t=>`<span class="type-badge" style="color:var(--orange);border-color:rgba(255,92,0,0.3);background:var(--orangedim)">${t}</span>`).join('')}</div>
-          </div>` : ''}
-        </div>` : ''}
+        ${(theoryTopics.length||numTopics.length)?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+          ${theoryTopics.length?`<div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px">Theory High</div><div class="type-grid">${theoryTopics.map(t=>`<span class="type-badge" style="color:var(--blue);border-color:rgba(72,112,192,0.25);background:var(--bluedim)">${t}</span>`).join('')}</div></div>`:''}
+          ${numTopics.length?`<div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--a-dark);text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px">Numerical High</div><div class="type-grid">${numTopics.map(t=>`<span class="type-badge" style="color:var(--a-dark);border-color:rgba(196,168,85,0.25);background:var(--adim)">${t}</span>`).join('')}</div></div>`:''}
+        </div>`:''}
       </div>
-
     </div>`;
 }
 
+/* ── HELPERS ── */
 function tog(id){document.getElementById(id).classList.toggle('open')}
 function switchTab(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('panel-'+name).classList.add('active');
+  btn.classList.add('active');document.getElementById('panel-'+name).classList.add('active');
 }
 async function exportReport(){
   if(!lastData)return;
@@ -990,7 +974,7 @@ async function exportReport(){
 }
 function resetApp(){
   files=[];lastData=null;renderFiles();updateBtn();
-  document.getElementById('uploadWrap').style.display='grid';
+  const uw=document.getElementById('uploadWrap');uw.style.display='';
   document.getElementById('results').classList.remove('on');
   ['ls1','ls2','ls3','ls4','ls5'].forEach(s=>document.getElementById(s).classList.remove('active','done'));
   document.getElementById('loadBar').style.width='0%';
@@ -1000,13 +984,13 @@ function resetApp(){
 function showLoading(){
   ['ls1','ls2','ls3','ls4','ls5'].forEach(s=>document.getElementById(s).classList.remove('active','done'));
   document.getElementById('loadBar').style.width='0%';
-  document.getElementById('loadName').textContent=`Analyzing for ${userName}...`;
+  document.getElementById('loadName').textContent='for '+userName;
   document.getElementById('loadingOverlay').classList.add('on');
   document.getElementById('analyzeBtn').disabled=true;
   startHype();
 }
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('on');stopHype();updateBtn()}
-function showErr(msg){const b=document.getElementById('errbox');b.textContent='⚠ '+msg;b.classList.add('on')}
+function showErr(msg){const b=document.getElementById('errbox');b.textContent=msg;b.classList.add('on')}
 function hideErr(){document.getElementById('errbox').classList.remove('on')}
 
 initQuotes();
