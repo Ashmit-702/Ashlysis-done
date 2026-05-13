@@ -534,8 +534,7 @@ const HYPE = [
   "abki baar 8 CGPA paar 🎯",
   "with ASHLYSIS, no KT 🚀",
   "cheer up, mate 💪",
-  "Sorry for the late",
-  "Last Exam kaisa tha",
+  "ek baar aur padh le yaar 📚",
   "almost there... 🔥",
 ];
 let hypeTimer = null;
@@ -676,7 +675,7 @@ function showResults(data){
   }
 
   // ── SPECIAL WINDOW (Paper Strategy) — always renders ──
-  showStrategy(paper_strategy || {}, subject);
+  showStrategy(paper_strategy || {}, subject, data);
   document.getElementById('uploadWrap').style.display='none';
   const lhp = last_hour_prep || {};
   document.getElementById('lhpHeader').innerHTML=`
@@ -782,28 +781,51 @@ const STRAT_DB = {
   }
 };
 
-function showStrategy(ps, subjectRaw) {
+function showStrategy(ps, subjectRaw, data) {
   const subj = (subjectRaw || 'general').toLowerCase();
   const db = STRAT_DB[subj] || STRAT_DB['general'];
 
-  // Merge backend data (if available) with hardcoded fallback
+  // Merge backend data with hardcoded fallback
   const approach     = ps.approach     || db.approach;
   const firstAttempt = ps.first_attempt || db.first_attempt;
   const avoidFirst   = ps.avoid_first  || db.avoid_first;
   const quickWin     = ps.quick_win    || db.quick_win;
 
-  // Question type data from backend or estimate from subject
+  // Question type data from backend
   const qt = ps.question_types || {};
   const theoryPct  = qt.theory_pct  || (db.num_heavy ? 55 : 85);
   const numPct     = qt.numerical_pct || (db.num_heavy ? 45 : 15);
   const theoryCount = qt.theory   || '—';
   const numCount    = qt.numerical || '—';
 
-  // Time split
-  const q1Time    = (ps.time_split && ps.time_split['Q1'])          || 25;
-  const qOptTime  = (ps.time_split && ps.time_split['Q2-Q6 each'])  || 27;
-  const bufTime   = (ps.time_split && ps.time_split['buffer'])       || 3;
-  const qOptTotal = qOptTime * 3;
+  // ── Latest paper breakdown ──
+  // Find the most recent paper from clusters (papers are named Month_Year)
+  const clusters = (data && data.clusters) || [];
+  const allPapers = [...new Set(clusters.flatMap(c => c.papers || []))];
+  // Sort papers by year-month to find latest
+  function paperSortKey(name) {
+    const m = {'January':1,'February':2,'March':3,'April':4,'May':5,'June':6,'July':7,'August':8,'September':9,'October':10,'November':11,'December':12};
+    const parts = name.split('_');
+    const yr = parseInt(parts[1]) || 0;
+    const mo = m[parts[0]] || 0;
+    return yr * 100 + mo;
+  }
+  const latestPaper = allPapers.sort((a,b) => paperSortKey(b) - paperSortKey(a))[0] || '';
+  // Get all clusters that appear in latest paper and classify them
+  const NUMERICAL_KEYWORDS = /calculate|compute|find.*cylinder|gantt|turnaround|waiting time|hit ratio|miss ratio|page fault|frame size|time quantum|fcfs|sjf|round robin|sstf|scan|c-scan|first fit|best fit|worst fit|lru|fifo|optimal.*page|\d{3,}/i;
+  let latestTheoryMarks = 0, latestNumMarks = 0;
+  const latestBreakdown = [];
+  clusters.forEach(c => {
+    const paperIdx = (c.papers || []).indexOf(latestPaper);
+    if (paperIdx === -1) return;
+    const q = (c.questions || [])[paperIdx] || '';
+    const m = (c.marks_each_time || [])[paperIdx] || 10;
+    const pos = (c.question_positions || [])[paperIdx] || '';
+    const isNum = NUMERICAL_KEYWORDS.test(q);
+    if (isNum) latestNumMarks += m; else latestTheoryMarks += m;
+    latestBreakdown.push({ topic: c.topic, marks: m, pos, isNum, q: q.slice(0, 80) });
+  });
+  const latestTotal = latestTheoryMarks + latestNumMarks;
 
   // Topic type lists from backend
   const theoryTopics  = (ps.high_theory_topics   || []);
@@ -825,7 +847,7 @@ function showStrategy(ps, subjectRaw) {
     </div>`;
   }
 
-  // Time bar
+  // Time bar — proportional to 180
   function tbar(label, mins, total, color) {
     const pct = Math.min(Math.round(mins/total*100), 100);
     return `<div class="tbar-row">
@@ -858,17 +880,43 @@ function showStrategy(ps, subjectRaw) {
             </div>
           </div>
         </div>
+        ${latestPaper && latestTotal > 0 ? `
+        <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">${latestPaper} — detected breakdown</div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <div style="flex:1;background:var(--bluedim);border:1px solid rgba(52,152,219,0.2);border-radius:6px;padding:10px;text-align:center">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--blue)">${latestTheoryMarks}m</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Theory marks</div>
+            </div>
+            <div style="flex:1;background:var(--orangedim);border:1px solid rgba(255,92,0,0.2);border-radius:6px;padding:10px;text-align:center">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--orange)">${latestNumMarks}m</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase">Numerical marks</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            ${latestBreakdown.slice(0,6).map(b=>`
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+                <span style="width:6px;height:6px;border-radius:50%;background:${b.isNum?'var(--orange)':'var(--blue)'};flex-shrink:0"></span>
+                <span style="flex:1;color:var(--mutedbr);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.topic}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${b.isNum?'var(--orange)':'var(--blue)'}">${b.isNum?'NUM':'THY'}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)">${b.marks}m</span>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
       </div>
 
       <div class="strat-card orange">
         <div class="strat-title"><span class="icon">⏱</span>Time Allocation — 180 min</div>
         <div class="time-bars">
-          ${tbar('Q1 (20m)', q1Time, 180, 'var(--orange)')}
-          ${tbar('Q opt ×3', qOptTotal, 180, 'var(--purple)')}
-          ${tbar('Buffer', bufTime, 180, 'var(--green)')}
+          ${tbar('Reading (all Q)', 15, 180, 'var(--yellow)')}
+          ${tbar('Q1 compulsory', 30, 180, 'var(--orange)')}
+          ${tbar('Q opt ×3 each', 27, 180, 'var(--purple)')}
+          ${tbar('Revision', 24, 180, 'var(--blue)')}
+          ${tbar('Buffer', 15, 180, 'var(--green)')}
         </div>
-        <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">
-          Spend max <strong style="color:var(--orange)">${Math.round(10/0.44)} min</strong> per 10-mark question &nbsp;·&nbsp; 0.44 marks/min
+        <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8">
+          15 (read) + 30 (Q1) + 81 (3×Q opt) + 24 (revise) + 15 (buffer) = <strong style="color:var(--orange)">165 min</strong> used · 15 spare<br>
+          Target: <strong style="color:var(--orange)">23 min</strong> per 10-mark question &nbsp;·&nbsp; 0.44 marks/min
         </div>
       </div>
 
