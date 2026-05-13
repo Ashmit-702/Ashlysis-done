@@ -923,49 +923,21 @@ def export_results():
         f"Clusters : {stats.get('clusters', 0)}",
         f"HIGH     : {stats.get('high_priority', 0)}",
     ]
-    
-    lines += ["", D, "MOST REPEATED QUESTIONS", D]
 
-    lines += [
-       "Paste into ChatGPT / Claude for full answers:",
-       "",
-       f"I am a Mumbai University student studying {subject}.",
-       "Please answer these frequently-repeated exam questions:",
-       ""
-    ]
-
-    seen_questions = set()
-
-    for i, c in enumerate(clusters[:15], 1):
-
-        questions = c.get('questions', [])
-
-        if not questions:
-            continue
-
-        main_q = questions[0].strip()
-
-        if main_q in seen_questions:
-            continue
-
-        seen_questions.add(main_q)
-
-        marks = ""
-
-        if c.get('marks_each_time'):
-            marks = f" [{c.get('marks_each_time')[0]}m]"
-
-        pos = ""
-
-        if c.get('question_positions'):
-            pos = f" [{c.get('question_positions')[0]}]"
-
-        lines.append(
-            f"{i}. {main_q}{marks}{pos}"
-       )
-
-    lines.append("")
-    lines.append(f"({min(len(clusters),15)} repeated questions from {stats.get('papers',0)} papers)")
+    lines += ["", D, "REPEATING QUESTIONS", D]
+    for i, c in enumerate(clusters, 1):
+        pos = c.get('question_positions', [])
+        marks = c.get('marks_each_time', [])
+        lines += [
+            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
+            f"   Papers : {', '.join(c.get('papers', []))}",
+            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
+            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
+            f"   Pattern: {c.get('pattern_note', '')}",
+            f"   Tip    : {c.get('tip', '')}",
+        ]
+        for q in c.get('questions', [])[:4]:
+            lines.append(f"   • {q[:200]}")
 
     lines += ["", D, "PREDICTED QUESTIONS", D]
     for i, p in enumerate(predictions, 1):
