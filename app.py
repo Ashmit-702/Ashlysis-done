@@ -293,10 +293,11 @@ Rules:
             return questions
         except Exception as e:
             err = str(e).lower()
-            if ('rate' in err or '429' in err) and _attempt < 2:
+            if ('rate' in err or '429' in err) and _attempt < 4:
                 rotated = rotate_groq_key()
-                client = Groq(api_key=get_groq_keys()[_key_index['i'] % len(get_groq_keys())])
-                time.sleep(3 if rotated else 15)
+                # get_groq_client() will now return the rotated key
+                client, _ = get_groq_client()
+                time.sleep(1 if rotated else 15)
                 continue
             return []
     return []
@@ -699,9 +700,11 @@ RULES — strictly follow:
 - quick_tip: be specific — name actual concepts, diagram labels, algorithms to mention.
 - Return ONLY valid JSON. Nothing before {{. Nothing after }}."""
 
-    for attempt in range(3):
+    for attempt in range(6):  # up to 6 attempts across all keys
         try:
-            resp = client.chat.completions.create(
+            # Always get fresh client — picks correct key after rotation
+            active_client, _ = get_groq_client()
+            resp = active_client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": "system", "content": "Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after."},
@@ -788,16 +791,12 @@ RULES — strictly follow:
         except Exception as e:
             err = str(e).lower()
             if 'rate' in err or '429' in err:
-                if attempt < 2:
+                if attempt < 5:
                     rotated = rotate_groq_key()
-                    if rotated:
-                        # switched to new key — try immediately
-                        time.sleep(2)
-                    else:
-                        # only one key — wait
-                        time.sleep(20)
+                    # rotated = switched to fresh key, try fast; not rotated = wait
+                    time.sleep(1 if rotated else 20)
                     continue
-                raise Exception('AI rate limit hit on all keys. Wait 1 minute and try again.')
+                raise Exception('All API keys are rate limited. Wait 1 minute and try again.')
             raise e
 
     # All attempts failed — full Python fallback
@@ -895,6 +894,8 @@ def analyze():
         all_questions = []
         sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
         for paper_name, (text, _) in sorted_papers:
+            # Refresh client each paper — picks up any key rotation that happened
+            client, _ = get_groq_client()
             questions = extract_questions_as_json(paper_name, clean_pdf_text(text), client)
             if questions:
                 all_questions.extend(questions)
