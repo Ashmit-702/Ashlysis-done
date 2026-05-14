@@ -220,7 +220,7 @@ def extract_text_via_vision(pdf_path, groq_client):
         import io as _io
         doc = fitz.open(pdf_path)
         page_images = []
-        for page_num in range(min(len(doc), 4)):
+        for page_num in range(min(len(doc), 2)):
             page = doc[page_num]
             pix = page.get_pixmap(matrix=fitz.Matrix(120 / 72, 120 / 72))
             img = PILImage.open(_io.BytesIO(pix.tobytes("png"))).convert('L')
