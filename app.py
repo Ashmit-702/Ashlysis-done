@@ -240,16 +240,29 @@ def extract_text_via_vision(pdf_path, groq_client):
         img_b64 = base64.b64encode(buf.getvalue()).decode()
         del stitched, page_images
         gc.collect()
-        resp = groq_client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=[{"role": "user", "content": [
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}},
-                {"type": "text", "text": "Engineering exam paper. Extract ALL questions Q1-Q6 with position and marks. Format: Q1a [5m]: question text. One per line. Plain text only."}
-            ]}],
-            max_tokens=2000, temperature=0.1
-        )
-        text = resp.choices[0].message.content
-        return clean_pdf_text(text) if text else ""
+        # Vision model has strict RPM limit — retry with key rotation on 429
+        for _vattempt in range(4):
+            try:
+                vision_client, _ = get_groq_client()
+                resp = vision_client.chat.completions.create(
+                    model="meta-llama/llama-4-scout-17b-16e-instruct",
+                    messages=[{"role": "user", "content": [
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}},
+                        {"type": "text", "text": "Engineering exam paper. Extract ALL questions Q1-Q6 with position and marks. Format: Q1a [5m]: question text. One per line. Plain text only."}
+                    ]}],
+                    max_tokens=2000, temperature=0.1
+                )
+                text = resp.choices[0].message.content
+                return clean_pdf_text(text) if text else ""
+            except Exception as ve:
+                verr = str(ve).lower()
+                if ('rate' in verr or '429' in verr) and _vattempt < 3:
+                    rotated = rotate_groq_key()
+                    # Vision RPM is strict — wait 12s even after rotation
+                    time.sleep(12 if rotated else 30)
+                    continue
+                return ""
+        return ""
     except Exception:
         return ""
 
@@ -873,6 +886,10 @@ def analyze():
             try:
                 text = extract_text_from_pdf(filepath)
                 if is_scanned_pdf(text):
+                    # Vision model has strict rate limits — sleep between OCR calls
+                    if ocr_used:  # not first OCR call — wait before next
+                        time.sleep(12)
+                    client, _ = get_groq_client()  # rotate key for vision too
                     vt = extract_text_via_vision(filepath, client)
                     if vt and len(vt.strip()) > 50:
                         text = vt
