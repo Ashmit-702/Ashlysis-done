@@ -220,7 +220,7 @@ def extract_text_via_vision(pdf_path, groq_client):
         import io as _io
         doc = fitz.open(pdf_path)
         page_images = []
-        for page_num in range(min(len(doc), 2)):
+        for page_num in range(min(len(doc), 4)):
             page = doc[page_num]
             pix = page.get_pixmap(matrix=fitz.Matrix(120 / 72, 120 / 72))
             img = PILImage.open(_io.BytesIO(pix.tobytes("png"))).convert('L')
@@ -655,15 +655,17 @@ def enrich_with_groq(clusters, user_name, subject, client):
             }
         }
 
+    # Sort clusters deterministically so same input = same prompt = same output
+    sorted_clusters = sorted(clusters, key=lambda c: (-c['frequency'], c['topic']))
     cluster_summary = json.dumps([{
         'topic': c['topic'],
         'frequency': c['frequency'],
         'importance': c['importance'],
-        'papers': c['papers'],
+        'papers': sorted(c['papers']),
         'sample_question': c['questions'][0][:200] if c['questions'] else '',
         'typical_marks': c['marks_each_time'][0] if c['marks_each_time'] else 10,
         'position': c['question_positions'][0] if c['question_positions'] else ''
-    } for c in clusters], indent=2)[:6000]
+    } for c in sorted_clusters], indent=2)[:6000]
 
     prompt = f"""You are an exam intelligence engine for {subject.upper()} engineering students.
 Student: {user_name}
@@ -723,7 +725,7 @@ RULES — strictly follow:
                     {"role": "system", "content": "Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.1,
+                temperature=0.0,
                 max_tokens=3500
             )
             raw = resp.choices[0].message.content.strip()
@@ -988,59 +990,44 @@ def export_results():
         f"HIGH     : {stats.get('high_priority', 0)}",
     ]
 
-    # ── SECTION 1: CLEAN NUMBERED QUESTION LIST ──
+    # ── SECTION 1: REPEATING QUESTIONS — plain numbered list, ChatGPT/Claude ready ──
     lines += ["", D, "REPEATING QUESTIONS", D, ""]
+    lines.append(f"Subject: {subject} | {stats.get('papers', 0)} papers analyzed")
+    lines.append("")
     for i, c in enumerate(clusters, 1):
-        marks = c.get('marks_each_time', [])
-        pos   = c.get('question_positions', [])
-        m_str = f"{marks[0]}m" if marks else "?"
-        p_str = pos[0] if pos else "?"
-        imp   = c.get('importance', 'LOW')
-        freq  = c.get('frequency', 1)
-        # Best question for this cluster
-        best_q = c['questions'][0].strip() if c.get('questions') else c['topic']
-        lines.append(f"{i}. [{imp}] {best_q}  [{m_str} · {p_str} · {freq}x]")
+        best_q = c['questions'][0].strip() if c.get('questions') else c.get('topic', '')
+        lines.append(f"{i}. {best_q}")
+    lines.append("")
 
-    # ── SECTION 2: FULL PATTERN ANALYSIS ──
-    lines += ["", "", D, "PATTERN ANALYSIS", D]
-    for i, c in enumerate(clusters, 1):
-        pos   = c.get('question_positions', [])
-        marks = c.get('marks_each_time', [])
-        lines += [
-            f"\n{i}. [{c.get('importance')}] {c.get('topic')} — {c.get('frequency')}x",
-            f"   Papers : {', '.join(c.get('papers', []))}",
-            f"   Pos    : {', '.join(str(p) for p in pos)}{'  ✓ ALWAYS SAME' if c.get('consistent_position') else ''}",
-            f"   Marks  : {', '.join(str(m) for m in marks)}{'  ✓ ALWAYS SAME' if c.get('consistent_marks') else ''}",
-            f"   Tip    : {c.get('tip', '')}",
-        ]
-        for q in c.get('questions', [])[:3]:
-            lines.append(f"   • {q[:200]}")
-
-    # ── SECTION 3: PREDICTED QUESTIONS ──
-    lines += ["", D, "PREDICTED QUESTIONS", D]
+    # ── SECTION 2: PREDICTED QUESTIONS ──
+    lines += [D, "PREDICTED QUESTIONS", D, ""]
     for i, p in enumerate(predictions, 1):
         lines += [
-            f"\n{i}. [{p.get('confidence')}] {p.get('question', '')[:200]}",
-            f"   Pos: {p.get('likely_position', '?')} | Marks: {p.get('likely_marks', '?')}m | {p.get('reason', '')}"
+            f"{i}. [{p.get('confidence')}] {p.get('question', '')[:200]}",
+            f"   Pos: {p.get('likely_position', '?')} | Marks: {p.get('likely_marks', '?')}m | {p.get('reason', '')}",
+            ""
         ]
 
-    # ── SECTION 4: LAST HOUR PREP ──
-    lines += ["", D, "LAST HOUR PREP — MINIMUM PASSING (40%)", D]
+    # ── SECTION 3: LAST HOUR PREP ──
+    lines += [D, "LAST HOUR PREP — MINIMUM PASSING (40%)", D, ""]
     if last_hour_prep:
         lines += [
-            f"\n{last_hour_prep.get('message', '')}",
+            last_hour_prep.get('message', ''),
             f"Strategy: {last_hour_prep.get('passing_strategy', '')}",
-            "\nMUST DO — 5 questions:"
+            "",
+            "MUST DO — 5 questions:",
+            ""
         ]
         for q in last_hour_prep.get('must_do', []):
             lines += [
-                f"\n{q.get('rank')}. {q.get('topic')} [{q.get('marks', 10)}m] — {q.get('position', '')}",
+                f"{q.get('rank')}. {q.get('topic')} [{q.get('marks', 10)}m] — {q.get('position', '')}",
                 f"   Q: {q.get('question', '')[:200]}",
                 f"   Why: {q.get('why', '')}",
-                f"   Include: {q.get('quick_tip', '')}"
+                f"   Include: {q.get('quick_tip', '')}",
+                ""
             ]
 
-    lines += ["", D, f"ASHLYSIS — generated for {user_name}", D]
+    lines += [D, f"ASHLYSIS — generated for {user_name}", D]
     buf = io.BytesIO("\n".join(lines).encode('utf-8'))
     buf.seek(0)
     return send_file(buf, mimetype='text/plain', as_attachment=True,
