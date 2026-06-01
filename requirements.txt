@@ -1,7 +1,7 @@
-flask==3.0.0
+flask
 groq
-pdfplumber==0.11.0
-PyMuPDF==1.24.0
-Pillow==10.3.0
-werkzeug==3.0.1
-gunicorn==21.2.0
+pdfplumber
+werkzeug
+pillow
+pymupdf
+gunicorn
