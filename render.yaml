@@ -2,8 +2,8 @@ services:
   - type: web
     name: ashlysis
     env: python
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --max-requests 50 --max-requests-jitter 10 --preload
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && pip install gunicorn
+    startCommand: python -m gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --max-requests 50 --max-requests-jitter 10 --preload
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
