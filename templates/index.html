@@ -1082,10 +1082,10 @@ function jumpQuote(i){
 }
 
 // ── HYPE ──
-const HYPE=["you slay, girl 💅","abki baar 8 CGPA paar 🎯","with ASHLYSIS, no KT 🚀","cheer up, mate 💪","ek baar aur padh le yaar 📚","almost there... 🔥","yaar tu toh crack karega 🙌"];
+const HYPE=["abki baar 8 CGPA paar 🎯","with ASHLYSIS, no KT 🚀","cheer up, mate 💪","almost there... 🔥",];
 let hypeTimer=null;
 function showHype(){const el=document.getElementById('loadHype');el.classList.remove('show');setTimeout(()=>{el.textContent=HYPE[Math.floor(Math.random()*HYPE.length)];el.classList.add('show')},400)}
-function startHype(){showHype();hypeTimer=setInterval(showHype,4000)}
+function startHype(){showHype();hypeTimer=setInterval(showHype,8000)}
 function stopHype(){clearInterval(hypeTimer);document.getElementById('loadHype').classList.remove('show')}
 
 // ── FILES ──
