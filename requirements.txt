@@ -1,7 +1,8 @@
 flask
 groq
 pdfplumber
+pdfminer.six
 werkzeug
 pillow
-pymupdf
+PyMuPDF
 gunicorn
