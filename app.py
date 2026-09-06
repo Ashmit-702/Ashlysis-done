@@ -185,8 +185,67 @@ def clean_pdf_text(text):
         clean.append(line)
     return '\n'.join(clean)
 
+# ── STRUCTURED ERRORS ──
+class PDFProcessingError(Exception):
+    """Raised for PDF issues that should surface as a structured, user-facing
+    error instead of a generic 500 or a guessable plain string."""
+    def __init__(self, code, message, details=''):
+        self.code = code
+        self.message = message
+        self.details = details
+        super().__init__(message)
+
+def err_response(code, message, details='', status=400, retryable=False):
+    return jsonify({
+        'success': False,
+        'error': {
+            'code': code,
+            'message': message,
+            'details': details,
+            'retryable': retryable
+        }
+    }), status
+
 # ── PDF EXTRACTION ──
-def extract_text_from_pdf(pdf_path):
+# Two independent, cheap (non-OCR) text-layer extractors are tried before
+# ever falling back to the expensive vision-model OCR path. pdfplumber and
+# PyMuPDF use different underlying decoders — a real academic PDF with an
+# unusual/subsetted font encoding can come back empty or garbled from one
+# library while the other reads it fine. Trying both costs a few ms and
+# avoids OCR (and its Groq rate limits / cold-start time) for PDFs that
+# actually have a perfectly good text layer.
+
+def _open_pymupdf_validated(pdf_path):
+    """Open with PyMuPDF first: this is also our validation step, since it
+    reliably distinguishes 'not a real PDF' / 'encrypted' / 'zero pages'
+    from a genuine extraction difficulty."""
+    import pymupdf
+    try:
+        doc = pymupdf.open(pdf_path)
+    except Exception as e:
+        raise PDFProcessingError(
+            'CORRUPTED_PDF',
+            "This file doesn't look like a valid PDF.",
+            "It may be corrupted, truncated, or not actually a PDF. "
+            "Try re-downloading or re-exporting it."
+        ) from e
+    if doc.is_encrypted:
+        # Some university PDFs are "protected" (no-copy/no-print) but have
+        # no real open password — that case unlocks with an empty password.
+        if not doc.authenticate(""):
+            doc.close()
+            raise PDFProcessingError(
+                'ENCRYPTED_PDF',
+                "This PDF is password-protected.",
+                "Remove the password (open it and use 'Print to PDF' or "
+                "'Save As' to create an unprotected copy) and re-upload."
+            )
+    if doc.page_count == 0:
+        doc.close()
+        raise PDFProcessingError('EMPTY_PDF', "This PDF has no pages.", "")
+    return doc
+
+def _extract_text_pdfplumber(pdf_path):
     text = ""
     try:
         with pdfplumber.open(pdf_path) as pdf:
@@ -200,9 +259,40 @@ def extract_text_from_pdf(pdf_path):
                     line = " ".join(w['text'] for w in words)
                     if len(line.strip()) > 30:
                         text += line + "\n"
-    except Exception as e:
-        raise Exception(f"Could not read PDF: {str(e)}")
-    return clean_pdf_text(text.strip())
+    except Exception:
+        # Don't hard-fail here — PyMuPDF gets a chance next. A real
+        # corrupted/encrypted file was already caught by the PyMuPDF
+        # validation step above, so a pdfplumber-only failure usually just
+        # means pdfplumber's decoder specifically choked on this file.
+        return ""
+    return text
+
+def _extract_text_pymupdf(doc):
+    text = ""
+    try:
+        for page in doc:
+            text += (page.get_text() or "") + "\n"
+    except Exception:
+        return ""
+    return text
+
+def extract_text_from_pdf(pdf_path):
+    """Returns (text, method, page_count). Raises PDFProcessingError for
+    corrupted / encrypted / zero-page files."""
+    doc = _open_pymupdf_validated(pdf_path)
+    try:
+        page_count = doc.page_count
+        plumber_text = clean_pdf_text(_extract_text_pdfplumber(pdf_path))
+        if plumber_text and len(plumber_text) >= 150:
+            return plumber_text, 'pdfplumber', page_count
+        # pdfplumber came back thin/empty — try PyMuPDF's own text layer
+        # (cheap, no rendering/OCR involved) before assuming it's scanned.
+        mupdf_text = clean_pdf_text(_extract_text_pymupdf(doc))
+        if len(mupdf_text) > len(plumber_text):
+            return mupdf_text, 'pymupdf', page_count
+        return plumber_text, 'pdfplumber', page_count
+    finally:
+        doc.close()
 
 def is_scanned_pdf(text):
     if not text or len(text.strip()) < 150: return True
@@ -215,14 +305,14 @@ def is_scanned_pdf(text):
 
 def extract_text_via_vision(pdf_path, groq_client):
     try:
-        import fitz, base64
+        import pymupdf, base64
         from PIL import Image as PILImage
         import io as _io
-        doc = fitz.open(pdf_path)
+        doc = pymupdf.open(pdf_path)
         page_images = []
         for page_num in range(min(len(doc), 4)):
             page = doc[page_num]
-            pix = page.get_pixmap(matrix=fitz.Matrix(120 / 72, 120 / 72))
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(120 / 72, 120 / 72))
             img = PILImage.open(_io.BytesIO(pix.tobytes("png"))).convert('L')
             page_images.append(img)
         doc.close()
@@ -847,29 +937,35 @@ def index():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     if 'files' not in request.files:
-        return jsonify({'error': 'No files uploaded.'}), 400
+        return err_response('NO_FILES', 'No files uploaded.', '', 400)
     files = request.files.getlist('files')
     if len(files) < 2:
-        return jsonify({'error': 'Upload at least 2 PYQ papers.'}), 400
+        return err_response('MIN_FILES', 'Upload at least 2 PYQ papers.',
+                             'Ashlysis needs at least 2 papers to detect repeat patterns.', 400)
     if len(files) > 6:
-        return jsonify({'error': 'Maximum 6 papers for best results.'}), 400
+        return err_response('MAX_FILES', 'Maximum 6 papers for best results.', '', 400)
     non_pdf = [f.filename for f in files if not f.filename.lower().endswith('.pdf')]
     if non_pdf:
-        return jsonify({'error': f'Only PDFs supported. Remove: {", ".join(non_pdf)}'}), 400
+        return err_response('INVALID_FILE_TYPE', 'Only PDF files are supported.',
+                             f'Remove: {", ".join(non_pdf)}', 400)
 
     user_name = request.form.get('user_name', 'Student').strip() or 'Student'
     user_name = re.sub(r'[^a-zA-Z0-9 ]', '', user_name)[:30]
     subject = request.form.get('subject', 'general').strip()
 
     if not get_groq_keys():
-        return jsonify({'error': 'Service not configured.'}), 500
+        return err_response('NOT_CONFIGURED', 'Service not configured.',
+                             'GROQ_API_KEY is missing on the server.', 500)
 
-    try: check_quota()
-    except Exception as e: return jsonify({'error': str(e)}), 429
+    try:
+        check_quota()
+    except Exception as e:
+        return err_response('DAILY_LIMIT', str(e), 'Please try again tomorrow.', 429)
 
     acquired = _analysis_lock.acquire(blocking=False)
     if not acquired:
-        return jsonify({'error': 'Server is busy. Please wait 30 seconds and try again.'}), 429
+        return err_response('SERVER_BUSY', 'Server is busy. Please wait 30 seconds and try again.',
+                             '', 429, retryable=True)
 
     client, num_keys = get_groq_client()
     all_papers_text = {}
@@ -887,29 +983,51 @@ def analyze():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             try:
-                text = extract_text_from_pdf(filepath)
+                try:
+                    text, method, page_count = extract_text_from_pdf(filepath)
+                except PDFProcessingError as pe:
+                    return err_response(pe.code, f'"{filename}": {pe.message}', pe.details, 400,
+                                         retryable=(pe.code not in ('ENCRYPTED_PDF', 'CORRUPTED_PDF', 'EMPTY_PDF')))
+
                 if is_scanned_pdf(text):
-                    # Vision model has strict rate limits — sleep between OCR calls
-                    if ocr_used:  # not first OCR call — wait before next
+                    # Both cheap text-layer extractors came back thin — only now
+                    # consider the expensive vision-OCR path (last resort).
+                    if ocr_used:  # not first OCR call this request — pace requests
                         time.sleep(12)
-                    client, _ = get_groq_client()  # rotate key for vision too
-                    vt = extract_text_via_vision(filepath, client)
+                    try:
+                        vision_client, _ = get_groq_client()
+                        vt = extract_text_via_vision(filepath, vision_client)
+                    except Exception:
+                        vt = ""
                     if vt and len(vt.strip()) > 50:
                         text = vt
+                        method = 'vision_ocr'
                         ocr_used.append(paper_name)
                     elif not text or len(text.strip()) < 50:
-                        return jsonify({'error': f'Cannot read "{filename}". Convert at smallpdf.com and re-upload.'}), 400
+                        return err_response(
+                            'SCANNED_NO_TEXT',
+                            f'"{filename}" doesn\'t contain readable text.',
+                            "Neither the text layer nor OCR could read this file. "
+                            "It may be a scanned image, a photo of a paper, or use "
+                            "an unusual font. Try re-exporting the PDF from the "
+                            "original source, or a clearer scan.",
+                            400, retryable=True)
                 all_papers_text[paper_name] = (text, sort_key)
-                with pdfplumber.open(filepath) as pdf:
-                    paper_stats[paper_name] = {'pages': len(pdf.pages), 'chars': len(text), 'ocr': paper_name in ocr_used}
+                paper_stats[paper_name] = {
+                    'pages': page_count, 'chars': len(text),
+                    'ocr': paper_name in ocr_used, 'method': method
+                }
+            except PDFProcessingError as pe:
+                return err_response(pe.code, f'"{filename}": {pe.message}', pe.details, 400)
             except Exception as e:
-                return jsonify({'error': f'Failed: "{filename}": {str(e)}'}), 500
+                return err_response('SERVER_ERROR', f'Something went wrong processing "{filename}".',
+                                     str(e), 500, retryable=True)
             finally:
                 if os.path.exists(filepath): os.remove(filepath)
                 gc.collect()
 
         if len(all_papers_text) < 2:
-            return jsonify({'error': 'Need at least 2 readable papers.'}), 400
+            return err_response('MIN_READABLE_FILES', 'Need at least 2 readable papers.', '', 400)
 
         all_questions = []
         sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
@@ -945,12 +1063,13 @@ def analyze():
             last_hour_prep = {'message': f"Stay focused, {user_name}.", 'passing_strategy': "Attempt Q1 (20m) + any 2 from Q2-Q6 (40m) = 60m minimum.", 'must_do': [{'rank': i+1, 'topic': c['topic'], 'question': c['questions'][0][:200] if c['questions'] else c['topic'], 'marks': c['marks_each_time'][0] if c['marks_each_time'] else 10, 'position': c['question_positions'][0] if c['question_positions'] else '', 'why': f"Appeared {c['frequency']} times", 'quick_tip': 'Draw diagram, cover all components, give example.'} for i, c in enumerate(clusters[:5])]}
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return err_response('SERVER_ERROR', 'Something went wrong during analysis.', str(e), 500, retryable=True)
     finally:
         gc.collect()
         _analysis_lock.release()
 
     return jsonify({
+        'success': True,
         'clusters': clusters,
         'predictions': predictions,
         'last_hour_prep': last_hour_prep,

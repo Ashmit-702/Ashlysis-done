@@ -241,6 +241,7 @@ select:focus{border-color:var(--a)}
   opacity:0;transition:opacity 0.3s;pointer-events:none;
 }
 .dropzone:hover,.dropzone.over{border-color:var(--a)}
+.dropzone:focus-visible{outline:2px solid var(--a);outline-offset:3px}
 .dropzone:hover::before,.dropzone.over::before{opacity:1}
 .dz-icon{font-size:26px;margin-bottom:10px;display:block;opacity:0.6}
 .dz-title{
@@ -292,12 +293,54 @@ select:focus{border-color:var(--a)}
 }
 .btn-analyze:disabled{opacity:0.28;cursor:not-allowed;transform:none}
 .errbox{
-  display:none;margin-top:12px;
-  background:var(--hidim);border:1px solid rgba(255,85,102,0.2);
-  border-radius:var(--radius-sm);padding:12px 14px;
-  font-family:'DM Mono',monospace;font-size:11px;color:#FF9090;line-height:1.6;
+  display:none;margin-top:14px;
+  background:var(--hidim);border:1px solid rgba(255,85,102,0.22);
+  border-radius:var(--radius);padding:16px 18px;
 }
-.errbox.on{display:block}
+.errbox.on{display:flex;gap:12px;align-items:flex-start;animation:errIn .25s ease}
+@keyframes errIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.filewarn{
+  display:none;margin-top:10px;font-size:11.5px;color:var(--med);
+  font-family:'DM Mono',monospace;line-height:1.5;
+  background:var(--meddim);border:1px solid rgba(240,160,48,0.2);
+  border-radius:var(--radius-sm);padding:8px 12px;
+}
+.filewarn.on{display:block;animation:errIn .2s ease}
+@media (prefers-reduced-motion: reduce){.filewarn.on{animation:none}}
+.err-icon{
+  flex-shrink:0;width:28px;height:28px;border-radius:50%;
+  background:rgba(255,85,102,0.15);color:var(--hi);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;
+}
+.err-body{flex:1;min-width:0}
+.err-title{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  color:var(--text);margin-bottom:4px;
+}
+.err-msg{font-size:12.5px;color:var(--text2);line-height:1.6;font-weight:300}
+.err-hint{
+  margin-top:6px;font-size:11px;color:var(--muted2);line-height:1.6;
+  font-family:'DM Mono',monospace;
+}
+.err-hint a{color:var(--a);text-decoration:underline;text-underline-offset:2px}
+.err-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.err-btn{
+  font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:500;
+  padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;
+  border:1px solid var(--borderhi);background:transparent;color:var(--text2);
+  transition:all .15s ease;
+}
+.err-btn:hover{border-color:var(--muted2);color:var(--text)}
+.err-btn.primary{background:var(--hi);border-color:var(--hi);color:#fff}
+.err-btn.primary:hover{background:#ff6b7a}
+.err-btn:focus-visible,.study-check:focus-visible,.btn-analyze:focus-visible,
+.fremove:focus-visible,.tab:focus-visible{
+  outline:2px solid var(--a);outline-offset:2px;
+}
+@media (prefers-reduced-motion: reduce){
+  .errbox.on{animation:none}
+}
 
 /* Info card */
 .icard{
@@ -832,9 +875,9 @@ footer{
       </div>
       ASHLYSIS
     </div>
-    <p class="modal-sub">Enter your name to get a personalized analysis report with your study plan.</p>
-    <input class="modal-input" id="nameInput" type="text" placeholder="Your name..." maxlength="30" autocomplete="off">
-    <button class="modal-btn" onclick="confirmName()">Start Analysis →</button>
+    <p class="modal-sub" id="nameModalDesc">Enter your name to get a personalized analysis report with your study plan.</p>
+    <input class="modal-input" id="nameInput" type="text" placeholder="Your name..." maxlength="30" autocomplete="off" aria-label="Your name" aria-describedby="nameModalDesc">
+    <button class="modal-btn" type="button" onclick="confirmName()">Start Analysis →</button>
     <p class="modal-hint">Free forever · No account needed · Papers stay private</p>
   </div>
 </div>
@@ -891,7 +934,7 @@ footer{
       <div class="ucard-title">Upload PYQ Papers</div>
       <div class="ucard-sub">// 2–6 papers · PDF only · text or scanned</div>
       <div class="subject-row">
-        <label class="field-label">Subject</label>
+        <label class="field-label" for="subjectSelect">Subject</label>
         <select id="subjectSelect">
           <option value="spcc">System Programming & Compiler Construction</option>
           <option value="dbms">Database Management Systems</option>
@@ -904,14 +947,17 @@ footer{
           <option value="general">Other Subject</option>
         </select>
       </div>
-      <div class="dropzone" id="dz" onclick="document.getElementById('fileinput').click()">
-        <span class="dz-icon">📄</span>
+      <div class="dropzone" id="dz" role="button" tabindex="0" aria-label="Upload PDF papers, minimum 2 maximum 6"
+           onclick="document.getElementById('fileinput').click()"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileinput').click()}">
+        <span class="dz-icon" aria-hidden="true">📄</span>
         <div class="dz-title">Drop PDF Papers Here</div>
         <p class="dz-sub">or click to browse · <b>minimum 2, maximum 6 papers</b></p>
       </div>
       <input type="file" id="fileinput" multiple accept=".pdf">
       <div class="filelist" id="filelist"></div>
-      <button class="btn-analyze" id="analyzeBtn" onclick="requestName()" disabled>Analyze Papers →</button>
+      <div class="filewarn" id="filewarn" role="status"></div>
+      <button class="btn-analyze" id="analyzeBtn" type="button" onclick="requestName()" disabled>Analyze Papers →</button>
       <div class="errbox" id="errbox"></div>
     </div>
 
@@ -1092,17 +1138,36 @@ function stopHype(){clearInterval(hypeTimer);document.getElementById('loadHype')
 const dz=document.getElementById('dz');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
 dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files).filter(f=>f.name.endsWith('.pdf')))});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files))});
 document.getElementById('fileinput').addEventListener('change',e=>{addFiles(Array.from(e.target.files));e.target.value=''});
-function addFiles(nf){nf.forEach(f=>{if(!files.find(x=>x.name===f.name))files.push(f)});renderFiles();updateBtn()}
+
+const MAX_FILES=6, MAX_FILE_SIZE=20*1024*1024; // 20MB/file — generous for a scanned exam paper, well under the server's 50MB total request cap
+function warnFile(msg){
+  const w=document.getElementById('filewarn');
+  w.textContent='⚠ '+msg;w.classList.add('on');
+  clearTimeout(w._t);w._t=setTimeout(()=>w.classList.remove('on'),4500);
+}
+function addFiles(nf){
+  const warnings=[];
+  nf.forEach(f=>{
+    if(!f.name.toLowerCase().endsWith('.pdf')){warnings.push(`"${f.name}" isn't a PDF — skipped`);return}
+    if(f.size===0){warnings.push(`"${f.name}" is empty — skipped`);return}
+    if(f.size>MAX_FILE_SIZE){warnings.push(`"${f.name}" is over 20MB — skipped`);return}
+    if(files.find(x=>x.name===f.name && x.size===f.size)){warnings.push(`"${f.name}" is already added`);return}
+    if(files.length>=MAX_FILES){warnings.push(`Only ${MAX_FILES} papers allowed — "${f.name}" skipped`);return}
+    files.push(f);
+  });
+  renderFiles();updateBtn();
+  if(warnings.length)warnFile(warnings[0]+(warnings.length>1?` (+${warnings.length-1} more issue${warnings.length>2?'s':''})`:''));
+}
 function removeFile(i){files.splice(i,1);renderFiles();updateBtn()}
 function renderFiles(){
   document.getElementById('filelist').innerHTML=files.map((f,i)=>`
     <div class="fileitem">
-      <span class="ficon">◈</span>
-      <span class="fname">${f.name}</span>
+      <span class="ficon" aria-hidden="true">◈</span>
+      <span class="fname" title="${f.name}">${f.name}</span>
       <span class="fsize">${(f.size/1024).toFixed(0)}KB</span>
-      <button class="fremove" onclick="removeFile(${i})">✕</button>
+      <button class="fremove" type="button" aria-label="Remove ${f.name}" onclick="removeFile(${i})">✕</button>
     </div>`).join('');
 }
 function updateBtn(){document.getElementById('analyzeBtn').disabled=files.length<2}
@@ -1120,27 +1185,53 @@ function confirmName(){
 async function startAnalysis(){
   showLoading();
   const steps=['ls1','ls2','ls3','ls4','ls5'];
-  const subs=['Reading your question papers...','Finding repeat patterns & positions...','Analyzing marks & paper structure...','Predicting exam questions...','Building Last Hour Prep...'];
+  // Deliberately vague progress copy — this is a fake step indicator to
+  // reassure the user nothing is frozen, not a real progress percentage
+  // (the backend doesn't stream progress, so we never claim exact %s).
+  const subs=['Preparing your papers...','Extracting questions...','Finding repeated topics...','Predicting likely questions...','Building your study strategy...'];
   const progs=[10,30,55,75,90];
   let si=0;
   const iv=setInterval(()=>{
     if(si>0){document.getElementById(steps[si-1]).classList.remove('active');document.getElementById(steps[si-1]).classList.add('done')}
     if(si<steps.length){document.getElementById(steps[si]).classList.add('active');document.getElementById('loadSub').textContent=subs[si];document.getElementById('loadBar').style.width=progs[si]+'%';si++}
   },2500);
+  // Render's free tier can cold-start (server was asleep) — after a while,
+  // reassure the user this is expected rather than looking frozen.
+  const coldStartNotice=setTimeout(()=>{
+    document.getElementById('loadSub').textContent='Still working — larger or scanned papers can take a bit longer...';
+  }, 20000);
   const fd=new FormData();
   files.forEach(f=>fd.append('files',f));
   fd.append('user_name',userName);
   fd.append('subject',document.getElementById('subjectSelect').value);
   try{
     const res=await fetch('/analyze',{method:'POST',body:fd});
-    clearInterval(iv);
+    clearInterval(iv);clearTimeout(coldStartNotice);
     document.getElementById('loadBar').style.width='100%';
-    const data=await res.json();
-    if(!res.ok){showErr(data.error||'Something went wrong.');hideLoading();return}
+    let data;
+    try{
+      data=await res.json();
+    }catch(parseErr){
+      // Response wasn't valid JSON at all — typically Render's own gateway
+      // page on a timeout/cold-start failure, not an app-level error.
+      showErr({code:'NETWORK',
+        message:'The server took too long to respond.',
+        details:'This can happen right after the app wakes up from being idle, or with a lot of scanned pages. Waiting a moment and trying again usually works.',
+        retryable:true});
+      hideLoading();return;
+    }
+    if(!res.ok || data.success===false){showErr(data.error||'Something went wrong.');hideLoading();return}
     lastData=data;
     await new Promise(r=>setTimeout(r,400));
     hideLoading();showResults(data);
-  }catch(e){clearInterval(iv);showErr('Network error. Please try again.');hideLoading()}
+  }catch(e){
+    clearInterval(iv);clearTimeout(coldStartNotice);
+    showErr({code:'NETWORK',
+      message:'Couldn\u2019t reach the server.',
+      details:'Check your connection and try again.',
+      retryable:true});
+    hideLoading();
+  }
 }
 
 // ── RESULTS ──
@@ -1432,8 +1523,59 @@ function showLoading(){
   startHype();
 }
 function hideLoading(){document.getElementById('loadingOverlay').classList.remove('on');stopHype();updateBtn()}
-function showErr(msg){const b=document.getElementById('errbox');b.textContent='⚠ '+msg;b.classList.add('on')}
-function hideErr(){document.getElementById('errbox').classList.remove('on')}
+// ── ERROR UX ──
+// error codes from the backend -> a friendly title + optional extra hint.
+// The backend's own `message`/`details` are always used for the body text;
+// this map only supplies a short, human title and (rarely) a soft external
+// hint — never a required step.
+const ERR_TITLES = {
+  NO_FILES:'No files received', MIN_FILES:'Add one more paper',
+  MAX_FILES:'Too many papers', INVALID_FILE_TYPE:'Unsupported file type',
+  NOT_CONFIGURED:'Service unavailable', DAILY_LIMIT:'Daily limit reached',
+  SERVER_BUSY:'Server is busy', ENCRYPTED_PDF:'PDF is password-protected',
+  CORRUPTED_PDF:'Couldn\u2019t open this PDF', EMPTY_PDF:'This PDF is empty',
+  SCANNED_NO_TEXT:'Couldn\u2019t read this PDF', MIN_READABLE_FILES:'Need more readable papers',
+  SERVER_ERROR:'Something went wrong', NETWORK:'Connection problem'
+};
+// smallpdf is mentioned only as a last-resort, optional hint for the one
+// case it's actually likely to help — never presented as a required step.
+const ERR_HINTS = {
+  SCANNED_NO_TEXT:'If this is a scanned copy, converting it at a site like <a href="https://smallpdf.com" target="_blank" rel="noopener">smallpdf.com</a> (OCR tool) before re-uploading sometimes helps — but re-exporting from the original source usually works better.'
+};
+
+let _lastErrRetryable=false;
+function showErr(err){
+  // Accept either the new structured {code,message,details,retryable} object
+  // or a plain string (defensive, in case any older/unexpected response
+  // shape slips through).
+  let code='SERVER_ERROR', message='Something went wrong.', details='', retryable=true;
+  if(typeof err==='string'){ message=err; }
+  else if(err && typeof err==='object'){
+    code=err.code||code; message=err.message||message;
+    details=err.details||''; retryable=!!err.retryable;
+  }
+  _lastErrRetryable=retryable;
+  const title=ERR_TITLES[code]||'Something went wrong';
+  const hint=ERR_HINTS[code]||'';
+  const b=document.getElementById('errbox');
+  b.innerHTML=`
+    <span class="err-icon" aria-hidden="true">!</span>
+    <div class="err-body">
+      <div class="err-title">${title}</div>
+      <div class="err-msg">${message}</div>
+      ${details?`<div class="err-msg" style="margin-top:4px;color:var(--muted2)">${details}</div>`:''}
+      ${hint?`<div class="err-hint">${hint}</div>`:''}
+      <div class="err-actions">
+        ${retryable?`<button type="button" class="err-btn primary" onclick="retryAnalysis()">Try Again</button>`:''}
+        <button type="button" class="err-btn" onclick="hideErr();resetFiles()">Upload Different Papers</button>
+      </div>
+    </div>`;
+  b.classList.add('on');
+  b.setAttribute('role','alert');
+}
+function hideErr(){const b=document.getElementById('errbox');b.classList.remove('on');b.innerHTML=''}
+function retryAnalysis(){ hideErr(); if(files.length>=2) requestName(); }
+function resetFiles(){ files=[]; renderFiles(); updateBtn(); }
 
 /* ── STUDY CHECKLIST — localStorage ── */
 let _studyKey = '';
