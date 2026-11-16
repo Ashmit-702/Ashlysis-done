@@ -31,38 +31,175 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-# ── GROQ KEY ROTATION ──
-# Set GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3 etc. in Render environment.
-# App auto-rotates when any key hits rate limit. Each key = 1 free Groq account.
+# ── GROQ KEYS, MODELS & RESILIENT CALLS ──
+# Env vars (any mix works, duplicates ignored):
+#   GROQ_API_KEY, GROQ_API_KEY_2 ... GROQ_API_KEY_20, GROQ_API_KEY_1
+#   GROQ_API_KEYS  (comma-separated list)
+# Optional model overrides: GROQ_TEXT_MODEL, GROQ_VISION_MODEL
+import logging
+log = logging.getLogger('ashlysis')
+
+def _model_chain(env_name, defaults):
+    chain = []
+    for m in [os.environ.get(env_name, '').strip()] + defaults:
+        if m and m not in chain:
+            chain.append(m)
+    return chain
+
+# Llama 4 Scout (vision) and Llama 3.3 70B (text) were retired by Groq in 2026.
+TEXT_MODELS = _model_chain('GROQ_TEXT_MODEL',
+    ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'llama-3.3-70b-versatile'])
+VISION_MODELS = _model_chain('GROQ_VISION_MODEL',
+    ['qwen/qwen3.6-27b', 'qwen/qwen3.8-27b', 'meta-llama/llama-4-scout-17b-16e-instruct'])
+
 _key_index = {'i': 0}
 _key_lock = threading.Lock()
+_dead_keys = {}        # key -> reason (401/403): skipped for process lifetime
+_cooldowns = {}        # (key, model) -> unix time when usable again (429)
+_bad_models = set()    # models Groq reports as retired / unknown / no access
+_no_reasoning = set()  # models that rejected the reasoning_effort param
+_clients = {}
+
+class GroqUnavailable(Exception):
+    """AI backend could not serve the request. code/status feed err_response()."""
+    def __init__(self, code, message, details='', status=503, retryable=True):
+        self.code, self.message, self.details = code, message, details
+        self.status, self.retryable = status, retryable
+        super().__init__(message)
 
 def get_groq_keys():
+    raw = [os.environ.get('GROQ_API_KEY', ''), os.environ.get('GROQ_API_KEYS', '')]
+    raw += [os.environ.get(f'GROQ_API_KEY_{n}', '') for n in range(1, 21)]
     keys = []
-    k = os.environ.get('GROQ_API_KEY', '')
-    if k: keys.append(k)
-    for n in range(2, 10):
-        k = os.environ.get(f'GROQ_API_KEY_{n}', '')
-        if k: keys.append(k)
+    for item in raw:
+        for k in item.split(','):
+            k = k.strip().strip('"\'')
+            if k and k not in keys:
+                keys.append(k)
     return keys
 
+def _client_for(key):
+    if key not in _clients:
+        _clients[key] = Groq(api_key=key, max_retries=0, timeout=90.0)
+    return _clients[key]
+
 def get_groq_client():
-    """Returns a Groq client using the current key in rotation."""
+    """Back-compat: returns (client, key_count) for the next usable key."""
     keys = get_groq_keys()
     if not keys:
-        raise Exception('No GROQ_API_KEY configured.')
+        raise GroqUnavailable('NOT_CONFIGURED', 'Service not configured.',
+                              'No GROQ_API_KEY is set on the server.', 500, False)
     with _key_lock:
-        idx = _key_index['i'] % len(keys)
-    return Groq(api_key=keys[idx]), len(keys)
+        live = [k for k in keys if k not in _dead_keys] or keys
+        return _client_for(live[_key_index['i'] % len(live)]), len(keys)
 
 def rotate_groq_key():
-    """Advance to next key. Returns True if rotation happened."""
+    """Back-compat: advance to the next key. True if there is more than one."""
     keys = get_groq_keys()
-    if len(keys) <= 1:
-        return False
     with _key_lock:
-        _key_index['i'] = (_key_index['i'] + 1) % len(keys)
-    return True
+        _key_index['i'] += 1
+    return len(keys) > 1
+
+def _classify_error(e):
+    """-> (kind, retry_after_seconds). kind: rate|auth|model|reasoning|transient|other"""
+    status = getattr(e, 'status_code', None)
+    msg = str(e).lower()
+    name = type(e).__name__
+    if status == 400 and 'reasoning' in msg:
+        return 'reasoning', 0
+    if status in (400, 403, 404) and ('model' in msg) and any(
+            w in msg for w in ('decommission', 'not found', 'does not exist', 'no longer',
+                               'not supported', 'permission', 'access', 'deprecated', 'blocked')):
+        return 'model', 0
+    if status in (401, 403):
+        return 'auth', 0
+    if status == 429 or name == 'RateLimitError':
+        ra = 0.0
+        try:
+            ra = float(e.response.headers.get('retry-after', 0))
+        except Exception:
+            m = re.search(r'try again in\s+(?:(\d+)m)?\s*([\d.]+)s', msg)
+            if m:
+                ra = int(m.group(1) or 0) * 60 + float(m.group(2))
+        if not ra:
+            ra = 3600 if 'per day' in msg else 20
+        return 'rate', min(ra, 3600)
+    if status and status >= 500 or name in ('APIConnectionError', 'APITimeoutError', 'InternalServerError'):
+        return 'transient', 0
+    return 'other', 0
+
+def groq_chat(kind, messages, max_tokens=2000, temperature=0.0):
+    """Single entry point for every Groq call. kind='text'|'vision'.
+    Walks the model chain; per model rotates keys with per-key cooldowns.
+    Returns the reply text, or raises GroqUnavailable with a meaningful reason."""
+    keys = get_groq_keys()
+    if not keys:
+        raise GroqUnavailable('NOT_CONFIGURED', 'Service not configured.',
+                              'No GROQ_API_KEY is set on the server.', 500, False)
+    chain = [m for m in (VISION_MODELS if kind == 'vision' else TEXT_MODELS) if m not in _bad_models]
+    last = ''
+    saw_rate = False
+    for model in chain:
+        transient_left = 2
+        guard = 0
+        while guard < len(keys) * 3 + 4:
+            guard += 1
+            now = time.time()
+            with _key_lock:
+                usable = [k for k in keys if k not in _dead_keys]
+                if not usable:
+                    raise GroqUnavailable('GROQ_AUTH', 'The AI service rejected all configured API keys.',
+                        'Every GROQ_API_KEY* value was refused (401/403). Create fresh keys at console.groq.com and update Render.',
+                        502, False)
+                ready = [k for k in usable if _cooldowns.get((k, model), 0) <= now]
+                if ready:
+                    key = ready[_key_index['i'] % len(ready)]
+                    _key_index['i'] += 1
+                    wait = 0
+                else:
+                    key = None
+                    wait = min(_cooldowns.get((k, model), 0) for k in usable) - now
+            if key is None:
+                if wait <= 25:
+                    time.sleep(max(wait, 0.5)); continue
+                saw_rate = True
+                break  # all keys cooling down on this model -> try next model
+            kw = dict(model=model, messages=messages, temperature=temperature,
+                      max_tokens=max_tokens + (1500 if model.startswith('openai/gpt-oss') else 0))
+            if model not in _no_reasoning:
+                kw['extra_body'] = {'reasoning_effort': 'low' if model.startswith('openai/gpt-oss') else 'none'}
+            try:
+                resp = _client_for(key).chat.completions.create(**kw)
+                text = (resp.choices[0].message.content or '')
+                text = re.sub(r'<think>.*?</think>', '', text, flags=re.S).strip()
+                if text:
+                    return text
+                last = f'{model}: empty reply'
+                break
+            except Exception as e:
+                k_no = (keys.index(key) + 1)
+                ekind, ra = _classify_error(e)
+                last = f'{model}: {type(e).__name__} {getattr(e, "status_code", "")}'
+                log.warning('Groq call failed (key #%d, %s): %s', k_no, model, last)
+                if ekind == 'reasoning':
+                    _no_reasoning.add(model); continue
+                if ekind == 'model':
+                    _bad_models.add(model); break
+                if ekind == 'auth':
+                    with _key_lock: _dead_keys[key] = last
+                    continue
+                if ekind == 'rate':
+                    saw_rate = True
+                    with _key_lock: _cooldowns[(key, model)] = time.time() + ra
+                    continue
+                if ekind == 'transient' and transient_left > 0:
+                    transient_left -= 1; time.sleep(2); continue
+                break
+    if saw_rate:
+        raise GroqUnavailable('RATE_LIMITED', 'The AI service is rate-limited right now.',
+                              'All API keys hit their Groq limit. Wait a minute and retry, or add more keys.', 429, True)
+    raise GroqUnavailable('AI_UNAVAILABLE', 'The AI service could not process the request.',
+                          f'Last error: {last or "no usable model"}. Check GROQ_TEXT_MODEL / GROQ_VISION_MODEL.', 503, True)
 
 PAPER_FORMAT = "Q1a/b/c/d = 5 marks each. Q2A/B through Q6A/B = 10 marks each. Total 80 marks, 3 hours."
 
@@ -303,58 +440,46 @@ def is_scanned_pdf(text):
     if not re.search(r'Q\.?\s*\d|explain|describe|define|discuss|marks|attempt', cleaned, re.I): return True
     return False
 
-def extract_text_via_vision(pdf_path, groq_client):
+OCR_MAX_PAGES = 6
+OCR_PAGES_PER_REQUEST = 2
+
+def _render_pages_b64(pdf_path):
+    """Render each page to a grayscale JPEG (long edge <=1800px). Returns list of b64 strings."""
+    import pymupdf, base64
+    from PIL import Image as PILImage
+    out = []
+    doc = pymupdf.open(pdf_path)
     try:
-        import pymupdf, base64
-        from PIL import Image as PILImage
-        import io as _io
-        doc = pymupdf.open(pdf_path)
-        page_images = []
-        for page_num in range(min(len(doc), 4)):
-            page = doc[page_num]
-            pix = page.get_pixmap(matrix=pymupdf.Matrix(120 / 72, 120 / 72))
-            img = PILImage.open(_io.BytesIO(pix.tobytes("png"))).convert('L')
-            page_images.append(img)
+        for i in range(min(len(doc), OCR_MAX_PAGES)):
+            pix = doc[i].get_pixmap(matrix=pymupdf.Matrix(150 / 72, 150 / 72), alpha=False)
+            img = PILImage.open(io.BytesIO(pix.tobytes("png"))).convert('L')
+            if max(img.size) > 1800:
+                img.thumbnail((1800, 1800))
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG', quality=80, optimize=True)
+            out.append(base64.b64encode(buf.getvalue()).decode())
+    finally:
         doc.close()
         gc.collect()
-        if not page_images: return ""
-        total_h = sum(img.height for img in page_images)
-        max_w = max(img.width for img in page_images)
-        stitched = PILImage.new('L', (max_w, total_h), 255)
-        y = 0
-        for img in page_images:
-            stitched.paste(img, (0, y))
-            y += img.height
-        buf = _io.BytesIO()
-        stitched.save(buf, format='JPEG', quality=65, optimize=True)
-        img_b64 = base64.b64encode(buf.getvalue()).decode()
-        del stitched, page_images
-        gc.collect()
-        # Vision model has strict RPM limit — retry with key rotation on 429
-        for _vattempt in range(4):
-            try:
-                vision_client, _ = get_groq_client()
-                resp = vision_client.chat.completions.create(
-                    model="meta-llama/llama-4-scout-17b-16e-instruct",
-                    messages=[{"role": "user", "content": [
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}},
-                        {"type": "text", "text": "Engineering exam paper. Extract ALL questions Q1-Q6 with position and marks. Format: Q1a [5m]: question text. One per line. Plain text only."}
-                    ]}],
-                    max_tokens=2000, temperature=0.1
-                )
-                text = resp.choices[0].message.content
-                return clean_pdf_text(text) if text else ""
-            except Exception as ve:
-                verr = str(ve).lower()
-                if ('rate' in verr or '429' in verr) and _vattempt < 3:
-                    rotated = rotate_groq_key()
-                    # Vision RPM is strict — wait 12s even after rotation
-                    time.sleep(12 if rotated else 30)
-                    continue
-                return ""
+    return out
+
+def extract_text_via_vision(pdf_path, groq_client=None):
+    """OCR a scanned/image PDF with a Groq vision model, page batch by batch.
+    Returns text ('' if the model saw nothing). Raises GroqUnavailable on API failure."""
+    pages = _render_pages_b64(pdf_path)
+    if not pages:
         return ""
-    except Exception:
-        return ""
+    prompt = ("These are consecutive pages of a university exam question paper. "
+              "Transcribe ALL printed text exactly, in reading order. Keep question numbers "
+              "(Q1, Q2, a), b)) and marks. Plain text only, no commentary.")
+    parts = []
+    for i in range(0, len(pages), OCR_PAGES_PER_REQUEST):
+        content = [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}"}}
+                   for b in pages[i:i + OCR_PAGES_PER_REQUEST]]
+        content.append({"type": "text", "text": prompt})
+        parts.append(groq_chat('vision', [{"role": "user", "content": content}],
+                               max_tokens=3500, temperature=0.0))
+    return clean_pdf_text('\n'.join(parts))
 
 # ── STEP 1: EXTRACT QUESTIONS AS JSON ──
 def extract_questions_as_json(paper_name, text, client):
@@ -376,33 +501,22 @@ Rules:
 - marks: 5 for Q1 parts, 10 for Q2-Q6, 0 if unclear
 - Extract exact question text
 - Return ONLY the JSON array, no markdown"""
-    for _attempt in range(3):
+    for _attempt in range(2):
         try:
-            resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "Extract exam questions as JSON array. No markdown."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.0,
-                max_tokens=2000
-            )
-            raw = resp.choices[0].message.content.strip()
-            raw = re.sub(r'^```(?:json)?\n?', '', raw)
-            raw = re.sub(r'\n?```$', '', raw).strip()
-            questions = json.loads(raw)
+            raw = groq_chat('text', [
+                {"role": "system", "content": "Extract exam questions as JSON array. No markdown."},
+                {"role": "user", "content": prompt}], max_tokens=2500)
+            raw = re.sub(r'^```(?:json)?\s*', '', raw.strip())
+            raw = re.sub(r'\s*```$', '', raw).strip()
+            i, j = raw.find('['), raw.rfind(']')
+            questions = json.loads(raw[i:j + 1])
             for q in questions:
                 q['paper'] = paper_name
             return questions
-        except Exception as e:
-            err = str(e).lower()
-            if ('rate' in err or '429' in err) and _attempt < 4:
-                rotated = rotate_groq_key()
-                # get_groq_client() will now return the rotated key
-                client, _ = get_groq_client()
-                time.sleep(1 if rotated else 15)
-                continue
-            return []
+        except GroqUnavailable:
+            raise
+        except Exception:
+            continue
     return []
 
 # ── STEP 2: TF-IDF CLUSTERING ──
@@ -805,21 +919,12 @@ RULES — strictly follow:
 - quick_tip: be specific — name actual concepts, diagram labels, algorithms to mention.
 - Return ONLY valid JSON. Nothing before {{. Nothing after }}."""
 
-    for attempt in range(6):  # up to 6 attempts across all keys
+    for attempt in range(3):
         try:
-            # Always get fresh client — picks correct key after rotation
-            active_client, _ = get_groq_client()
-            resp = active_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.0,
-                max_tokens=3500
-            )
-            raw = resp.choices[0].message.content.strip()
-            raw = re.sub(r'^```(?:json)?\s*', '', raw)
+            raw = groq_chat('text', [
+                {"role": "system", "content": "Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after."},
+                {"role": "user", "content": prompt}], max_tokens=3500)
+            raw = re.sub(r'^```(?:json)?\s*', '', raw.strip())
             raw = re.sub(r'\s*```$', '', raw)
             start = raw.find('{')
             end = raw.rfind('}')
@@ -893,16 +998,10 @@ RULES — strictly follow:
                 time.sleep(5)
                 continue
             break
-        except Exception as e:
-            err = str(e).lower()
-            if 'rate' in err or '429' in err:
-                if attempt < 5:
-                    rotated = rotate_groq_key()
-                    # rotated = switched to fresh key, try fast; not rotated = wait
-                    time.sleep(1 if rotated else 20)
-                    continue
-                raise Exception('All API keys are rate limited. Wait 1 minute and try again.')
-            raise e
+        except GroqUnavailable:
+            break  # key/model/rate problems already retried inside groq_chat -> Python fallback
+        except Exception:
+            break
 
     # All attempts failed — full Python fallback
     for c in clusters:
@@ -955,7 +1054,7 @@ def analyze():
 
     if not get_groq_keys():
         return err_response('NOT_CONFIGURED', 'Service not configured.',
-                             'GROQ_API_KEY is missing on the server.', 500)
+                             'No GROQ_API_KEY is set on the server.', 500)
 
     try:
         check_quota()
@@ -967,7 +1066,7 @@ def analyze():
         return err_response('SERVER_BUSY', 'Server is busy. Please wait 30 seconds and try again.',
                              '', 429, retryable=True)
 
-    client, num_keys = get_groq_client()
+    client = None
     all_papers_text = {}
     paper_stats = {}
     ocr_used = []
@@ -994,11 +1093,15 @@ def analyze():
                     # consider the expensive vision-OCR path (last resort).
                     if ocr_used:  # not first OCR call this request — pace requests
                         time.sleep(12)
+                    vt = ""
                     try:
-                        vision_client, _ = get_groq_client()
-                        vt = extract_text_via_vision(filepath, vision_client)
-                    except Exception:
-                        vt = ""
+                        vt = extract_text_via_vision(filepath)
+                    except GroqUnavailable as ge:
+                        if not text or len(text.strip()) < 50:
+                            return err_response(ge.code, f'"{filename}": {ge.message}', ge.details,
+                                                 ge.status, retryable=ge.retryable)
+                    except Exception as oe:
+                        log.warning('OCR render failed: %s', type(oe).__name__)
                     if vt and len(vt.strip()) > 50:
                         text = vt
                         method = 'vision_ocr'
@@ -1033,8 +1136,12 @@ def analyze():
         sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
         for paper_name, (text, _) in sorted_papers:
             # Refresh client each paper — picks up any key rotation that happened
-            client, _ = get_groq_client()
-            questions = extract_questions_as_json(paper_name, clean_pdf_text(text), client)
+            try:
+                questions = extract_questions_as_json(paper_name, clean_pdf_text(text), client)
+            except GroqUnavailable as ge:
+                if ge.code in ('GROQ_AUTH', 'NOT_CONFIGURED'):
+                    return err_response(ge.code, ge.message, ge.details, ge.status, retryable=ge.retryable)
+                questions = []
             if questions:
                 all_questions.extend(questions)
             else:
@@ -1062,6 +1169,8 @@ def analyze():
         if not last_hour_prep.get('must_do'):
             last_hour_prep = {'message': f"Stay focused, {user_name}.", 'passing_strategy': "Attempt Q1 (20m) + any 2 from Q2-Q6 (40m) = 60m minimum.", 'must_do': [{'rank': i+1, 'topic': c['topic'], 'question': c['questions'][0][:200] if c['questions'] else c['topic'], 'marks': c['marks_each_time'][0] if c['marks_each_time'] else 10, 'position': c['question_positions'][0] if c['question_positions'] else '', 'why': f"Appeared {c['frequency']} times", 'quick_tip': 'Draw diagram, cover all components, give example.'} for i, c in enumerate(clusters[:5])]}
 
+    except GroqUnavailable as ge:
+        return err_response(ge.code, ge.message, ge.details, ge.status, retryable=ge.retryable)
     except Exception as e:
         return err_response('SERVER_ERROR', 'Something went wrong during analysis.', str(e), 500, retryable=True)
     finally:
