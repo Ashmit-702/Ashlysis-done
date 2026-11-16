@@ -1,21 +1,17 @@
-# ASHLYSIS — Powered by Google Gemini (FREE)
+# ASHLYSIS — Powered by Groq (free tier)
 
-## Get Your FREE Gemini API Key (2 minutes)
-
-1. Go to https://aistudio.google.com
-2. Sign in with your Google account
-3. Click **Get API Key** → **Create API Key**
-4. Copy the key (starts with `AIza...`)
-
-Free tier: 15 requests/min, 1 million tokens/day — more than enough!
+## Render environment variables
+- `GROQ_API_KEY` (first key), `GROQ_API_KEY_2`, `GROQ_API_KEY_3` ... up to `GROQ_API_KEY_20`
+- or one variable `GROQ_API_KEYS` = comma-separated keys
+- Optional: `GROQ_TEXT_MODEL` (default `openai/gpt-oss-120b`), `GROQ_VISION_MODEL` (default `qwen/qwen3.6-27b`)
 
 ## Deploy on Render
 
 1. Push this folder to a GitHub repo
 2. Render → New Web Service → connect repo
 3. **Environment Variables** → Add:
-   - Key: `GEMINI_API_KEY`
-   - Value: `AIza...` (your key)
+   - Key: `GROQ_API_KEY`
+   - Value: your Groq key (`gsk_...`)
 4. Deploy → live in 3 minutes
 
 ## No cost to you, no cost to users. Ever.
