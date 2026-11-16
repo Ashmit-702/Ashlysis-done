@@ -12,6 +12,8 @@ import pdfplumber
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from groq import Groq
+from ashlysis_core import (sha256_file, content_similarity, detect_metadata, local_parse_questions,
+                           question_supported_by_text, importance_for, marks_distribution, SUBJECT_NAMES)
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
@@ -31,11 +33,10 @@ def check_quota():
         raise Exception('Daily limit reached. Try again tomorrow.')
     _quota['count'] += 1
 
-# ── GROQ KEYS, MODELS & RESILIENT CALLS ──
-# Env vars (any mix works, duplicates ignored):
-#   GROQ_API_KEY, GROQ_API_KEY_2 ... GROQ_API_KEY_20, GROQ_API_KEY_1
-#   GROQ_API_KEYS  (comma-separated list)
-# Optional model overrides: GROQ_TEXT_MODEL, GROQ_VISION_MODEL
+# ── AI PROVIDERS (both optional): GROQ_API_KEY, GEMINI_API_KEY ──
+# Groq : GROQ_API_KEY (+ GROQ_API_KEY_2..20 or GROQ_API_KEYS=a,b) — text + vision, same key.
+# Gemini: GEMINI_API_KEY (+ GEMINI_API_KEY_2..20 or GEMINI_API_KEYS=a,b) — PDF understanding + text.
+# Optional model overrides: GROQ_TEXT_MODEL, GROQ_VISION_MODEL, GEMINI_MODEL
 import logging
 log = logging.getLogger('ashlysis')
 
@@ -46,30 +47,33 @@ def _model_chain(env_name, defaults):
             chain.append(m)
     return chain
 
-# Llama 4 Scout (vision) and Llama 3.3 70B (text) were retired by Groq in 2026.
+# Retired by providers in 2026: llama-4-scout, llama-3.3-70b, gemini-2.5-*. Chains skip dead IDs automatically.
 TEXT_MODELS = _model_chain('GROQ_TEXT_MODEL',
     ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'llama-3.3-70b-versatile'])
 VISION_MODELS = _model_chain('GROQ_VISION_MODEL',
     ['qwen/qwen3.6-27b', 'qwen/qwen3.8-27b', 'meta-llama/llama-4-scout-17b-16e-instruct'])
+GEMINI_MODELS = _model_chain('GEMINI_MODEL',
+    ['gemini-3.8-flash', 'gemini-3-flash-preview', 'gemini-3.5-flash-lite'])
 
 _key_index = {'i': 0}
 _key_lock = threading.Lock()
 _dead_keys = {}        # key -> reason (401/403): skipped for process lifetime
 _cooldowns = {}        # (key, model) -> unix time when usable again (429)
-_bad_models = set()    # models Groq reports as retired / unknown / no access
-_no_reasoning = set()  # models that rejected the reasoning_effort param
+_bad_models = set()    # models reported retired / unknown / no access
+_no_reasoning = set()
 _clients = {}
 
 class GroqUnavailable(Exception):
-    """AI backend could not serve the request. code/status feed err_response()."""
+    """An AI provider could not serve the request. code/status feed err_response()."""
     def __init__(self, code, message, details='', status=503, retryable=True):
         self.code, self.message, self.details = code, message, details
         self.status, self.retryable = status, retryable
         super().__init__(message)
+ProviderError = GroqUnavailable
 
-def get_groq_keys():
-    raw = [os.environ.get('GROQ_API_KEY', ''), os.environ.get('GROQ_API_KEYS', '')]
-    raw += [os.environ.get(f'GROQ_API_KEY_{n}', '') for n in range(1, 21)]
+def _collect_keys(base, plural):
+    raw = [os.environ.get(base, ''), os.environ.get(plural, '')]
+    raw += [os.environ.get(f'{base}_{n}', '') for n in range(1, 21)]
     keys = []
     for item in raw:
         for k in item.split(','):
@@ -78,78 +82,97 @@ def get_groq_keys():
                 keys.append(k)
     return keys
 
+def get_groq_keys():   return _collect_keys('GROQ_API_KEY', 'GROQ_API_KEYS')
+def get_gemini_keys(): return _collect_keys('GEMINI_API_KEY', 'GEMINI_API_KEYS')
+
+def _redact(s):
+    s = str(s)
+    for k in get_groq_keys() + get_gemini_keys():
+        s = s.replace(k, '[redacted]')
+    return re.sub(r'(gsk_|AIza)[A-Za-z0-9_\-]{8,}', '[redacted]', s)
+
+def provider_status():
+    """Safe to show in the UI: counts and states only, never key material."""
+    gk, mk = get_groq_keys(), get_gemini_keys()
+    return {
+        'groq': {'configured': bool(gk), 'keys': len(gk),
+                 'invalid_keys': len([k for k in gk if k in _dead_keys]), 'vision_models': VISION_MODELS[:1]},
+        'gemini': {'configured': bool(mk), 'keys': len(mk),
+                   'invalid_keys': len([k for k in mk if k in _dead_keys]), 'models': GEMINI_MODELS[:1]},
+        'local_text_extraction': True,
+    }
+
 def _client_for(key):
     if key not in _clients:
         _clients[key] = Groq(api_key=key, max_retries=0, timeout=90.0)
     return _clients[key]
 
+def _gemini_client_for(key):
+    if ('gem', key) not in _clients:
+        from google import genai
+        _clients[('gem', key)] = genai.Client(api_key=key)
+    return _clients[('gem', key)]
+
 def get_groq_client():
-    """Back-compat: returns (client, key_count) for the next usable key."""
     keys = get_groq_keys()
     if not keys:
-        raise GroqUnavailable('NOT_CONFIGURED', 'Service not configured.',
-                              'No GROQ_API_KEY is set on the server.', 500, False)
+        raise GroqUnavailable('NOT_CONFIGURED', 'Groq is not configured.', 'No GROQ_API_KEY is set.', 500, False)
     with _key_lock:
         live = [k for k in keys if k not in _dead_keys] or keys
         return _client_for(live[_key_index['i'] % len(live)]), len(keys)
 
 def rotate_groq_key():
-    """Back-compat: advance to the next key. True if there is more than one."""
-    keys = get_groq_keys()
     with _key_lock:
         _key_index['i'] += 1
-    return len(keys) > 1
+    return len(get_groq_keys()) > 1
 
 def _classify_error(e):
     """-> (kind, retry_after_seconds). kind: rate|auth|model|reasoning|transient|other"""
-    status = getattr(e, 'status_code', None)
+    status = getattr(e, 'status_code', None) or getattr(e, 'code', None)
+    if not isinstance(status, int):
+        status = None
     msg = str(e).lower()
     name = type(e).__name__
     if status == 400 and 'reasoning' in msg:
         return 'reasoning', 0
+    if 'api key not valid' in msg or 'api_key_invalid' in msg or 'invalid api key' in msg:
+        return 'auth', 0
     if status in (400, 403, 404) and ('model' in msg) and any(
             w in msg for w in ('decommission', 'not found', 'does not exist', 'no longer',
                                'not supported', 'permission', 'access', 'deprecated', 'blocked')):
         return 'model', 0
     if status in (401, 403):
         return 'auth', 0
-    if status == 429 or name == 'RateLimitError':
+    if status == 429 or name == 'RateLimitError' or 'resource_exhausted' in msg:
         ra = 0.0
         try:
             ra = float(e.response.headers.get('retry-after', 0))
         except Exception:
-            m = re.search(r'try again in\s+(?:(\d+)m)?\s*([\d.]+)s', msg)
+            m = re.search(r'(?:try again|retry) in\s+(?:(\d+)m)?\s*([\d.]+)s', msg)
             if m:
                 ra = int(m.group(1) or 0) * 60 + float(m.group(2))
         if not ra:
-            ra = 3600 if 'per day' in msg else 20
+            ra = 3600 if 'per day' in msg or 'daily' in msg else 20
         return 'rate', min(ra, 3600)
-    if status and status >= 500 or name in ('APIConnectionError', 'APITimeoutError', 'InternalServerError'):
+    if (status and status >= 500) or name in ('APIConnectionError', 'APITimeoutError', 'InternalServerError',
+                                              'ServerError', 'ConnectError', 'ReadTimeout'):
         return 'transient', 0
     return 'other', 0
 
-def groq_chat(kind, messages, max_tokens=2000, temperature=0.0):
-    """Single entry point for every Groq call. kind='text'|'vision'.
-    Walks the model chain; per model rotates keys with per-key cooldowns.
-    Returns the reply text, or raises GroqUnavailable with a meaningful reason."""
-    keys = get_groq_keys()
-    if not keys:
-        raise GroqUnavailable('NOT_CONFIGURED', 'Service not configured.',
-                              'No GROQ_API_KEY is set on the server.', 500, False)
-    chain = [m for m in (VISION_MODELS if kind == 'vision' else TEXT_MODELS) if m not in _bad_models]
-    last = ''
-    saw_rate = False
-    for model in chain:
-        transient_left = 2
-        guard = 0
+def _run_chain(provider, keys, models, invoke, max_tokens):
+    """Walk models; per model rotate keys with cooldowns. invoke(key, model, reasoning, max_tokens)->text."""
+    P = provider.upper()
+    last, saw_rate, saw_net = '', False, False
+    for model in [m for m in models if m not in _bad_models]:
+        transient_left, guard = 2, 0
         while guard < len(keys) * 3 + 4:
             guard += 1
             now = time.time()
             with _key_lock:
                 usable = [k for k in keys if k not in _dead_keys]
                 if not usable:
-                    raise GroqUnavailable('GROQ_AUTH', 'The AI service rejected all configured API keys.',
-                        'Every GROQ_API_KEY* value was refused (401/403). Create fresh keys at console.groq.com and update Render.',
+                    raise GroqUnavailable(f'{P}_AUTH', f'{provider.title()} rejected all configured API keys.',
+                        f'Every {P}_API_KEY value was refused (invalid or revoked). Create a fresh key and update the environment.',
                         502, False)
                 ready = [k for k in usable if _cooldowns.get((k, model), 0) <= now]
                 if ready:
@@ -163,24 +186,18 @@ def groq_chat(kind, messages, max_tokens=2000, temperature=0.0):
                 if wait <= 25:
                     time.sleep(max(wait, 0.5)); continue
                 saw_rate = True
-                break  # all keys cooling down on this model -> try next model
-            kw = dict(model=model, messages=messages, temperature=temperature,
-                      max_tokens=max_tokens + (1500 if model.startswith('openai/gpt-oss') else 0))
-            if model not in _no_reasoning:
-                kw['extra_body'] = {'reasoning_effort': 'low' if model.startswith('openai/gpt-oss') else 'none'}
+                break
             try:
-                resp = _client_for(key).chat.completions.create(**kw)
-                text = (resp.choices[0].message.content or '')
-                text = re.sub(r'<think>.*?</think>', '', text, flags=re.S).strip()
+                text = invoke(key, model, model not in _no_reasoning, max_tokens)
+                text = re.sub(r'<think>.*?</think>', '', text or '', flags=re.S).strip()
                 if text:
                     return text
                 last = f'{model}: empty reply'
                 break
             except Exception as e:
-                k_no = (keys.index(key) + 1)
                 ekind, ra = _classify_error(e)
-                last = f'{model}: {type(e).__name__} {getattr(e, "status_code", "")}'
-                log.warning('Groq call failed (key #%d, %s): %s', k_no, model, last)
+                last = f'{model}: {type(e).__name__} {getattr(e, "status_code", "") or getattr(e, "code", "")}'
+                log.warning('%s call failed (key #%d, %s)', provider, keys.index(key) + 1, last)
                 if ekind == 'reasoning':
                     _no_reasoning.add(model); continue
                 if ekind == 'model':
@@ -192,14 +209,69 @@ def groq_chat(kind, messages, max_tokens=2000, temperature=0.0):
                     saw_rate = True
                     with _key_lock: _cooldowns[(key, model)] = time.time() + ra
                     continue
-                if ekind == 'transient' and transient_left > 0:
-                    transient_left -= 1; time.sleep(2); continue
+                if ekind == 'transient':
+                    saw_net = True
+                    if transient_left > 0:
+                        transient_left -= 1; time.sleep(2); continue
                 break
     if saw_rate:
-        raise GroqUnavailable('RATE_LIMITED', 'The AI service is rate-limited right now.',
-                              'All API keys hit their Groq limit. Wait a minute and retry, or add more keys.', 429, True)
-    raise GroqUnavailable('AI_UNAVAILABLE', 'The AI service could not process the request.',
-                          f'Last error: {last or "no usable model"}. Check GROQ_TEXT_MODEL / GROQ_VISION_MODEL.', 503, True)
+        raise GroqUnavailable('RATE_LIMITED', f'{provider.title()} is rate-limited right now.',
+                              'Every key hit its quota. Wait a minute and retry, or add another key.', 429, True)
+    if saw_net:
+        raise GroqUnavailable('NETWORK_ERROR', f'Could not reach {provider.title()}.',
+                              'Network failure or provider outage. Try again shortly.', 503, True)
+    raise GroqUnavailable('AI_UNAVAILABLE', f'{provider.title()} could not process the request.',
+                          f'Last error: {last or "no usable model"}. Models may be retired; set '
+                          f'{"GEMINI_MODEL" if provider == "gemini" else "GROQ_TEXT_MODEL / GROQ_VISION_MODEL"}.',
+                          503, True)
+
+def groq_chat(kind, messages, max_tokens=2000, temperature=0.0):
+    keys = get_groq_keys()
+    if not keys:
+        raise GroqUnavailable('NOT_CONFIGURED', 'Groq is not configured.', 'No GROQ_API_KEY is set.', 500, False)
+    def invoke(key, model, reasoning, mt):
+        kw = dict(model=model, messages=messages, temperature=temperature,
+                  max_tokens=mt + (1500 if model.startswith('openai/gpt-oss') else 0))
+        if reasoning:
+            kw['extra_body'] = {'reasoning_effort': 'low' if model.startswith('openai/gpt-oss') else 'none'}
+        r = _client_for(key).chat.completions.create(**kw)
+        return r.choices[0].message.content or ''
+    return _run_chain('groq', keys, VISION_MODELS if kind == 'vision' else TEXT_MODELS, invoke, max_tokens)
+
+def gemini_generate(prompt, pdf_bytes=None, max_tokens=8000):
+    """Gemini text, or native PDF understanding when pdf_bytes is given (inline, <=18 MB)."""
+    keys = get_gemini_keys()
+    if not keys:
+        raise GroqUnavailable('NOT_CONFIGURED', 'Gemini is not configured.', 'No GEMINI_API_KEY is set.', 500, False)
+    def invoke(key, model, reasoning, mt):
+        from google.genai import types
+        parts = []
+        if pdf_bytes is not None:
+            parts.append(types.Part.from_bytes(data=pdf_bytes, mime_type='application/pdf'))
+        parts.append(prompt)
+        r = _gemini_client_for(key).models.generate_content(
+            model=model, contents=parts,
+            config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=mt))
+        return r.text or ''
+    return _run_chain('gemini', keys, GEMINI_MODELS, invoke, max_tokens)
+
+def ai_text(system, user, max_tokens=2500):
+    """Text generation: Groq first, Gemini as fallback; either may be absent."""
+    errs = []
+    if get_groq_keys():
+        try:
+            return groq_chat('text', [{"role": "system", "content": system}, {"role": "user", "content": user}], max_tokens)
+        except GroqUnavailable as e:
+            errs.append(e)
+    if get_gemini_keys():
+        try:
+            return gemini_generate(system + "\n\n" + user, max_tokens=max_tokens + 1500)
+        except GroqUnavailable as e:
+            errs.append(e)
+    if errs:
+        raise errs[0]
+    raise GroqUnavailable('NOT_CONFIGURED', 'No AI provider configured.',
+                          'Set GROQ_API_KEY and/or GEMINI_API_KEY.', 500, False)
 
 PAPER_FORMAT = "Q1a/b/c/d = 5 marks each. Q2A/B through Q6A/B = 10 marks each. Total 80 marks, 3 hours."
 
@@ -338,7 +410,7 @@ def err_response(code, message, details='', status=400, retryable=False):
         'error': {
             'code': code,
             'message': message,
-            'details': details,
+            'details': _redact(details),
             'retryable': retryable
         }
     }), status
@@ -442,17 +514,26 @@ def is_scanned_pdf(text):
 
 OCR_MAX_PAGES = 6
 OCR_PAGES_PER_REQUEST = 2
+GEMINI_PDF_MAX_BYTES = 18 * 1024 * 1024
+_ocr_cache = {}   # sha256 -> (text, provider, warnings); a file is never OCR'd twice
+
+OCR_PROMPT = ("Transcribe ALL printed text of this university exam question paper exactly, in reading order. "
+              "Keep question numbers (Q1, Q2, a), b), (A), (B)), marks (e.g. [5], 10 marks), headings, and render "
+              "tables as plain text rows. If a page is rotated, read it upright. If any word or number is unreadable, "
+              "write [illegible] instead of guessing. Do not add commentary and do not invent missing text. Plain text only.")
 
 def _render_pages_b64(pdf_path):
-    """Render each page to a grayscale JPEG (long edge <=1800px). Returns list of b64 strings."""
+    """Render pages (<=OCR_MAX_PAGES) as contrast-enhanced grayscale JPEGs (long edge <=1800px)."""
     import pymupdf, base64
-    from PIL import Image as PILImage
-    out = []
+    from PIL import Image as PILImage, ImageOps, ImageFilter
+    out, total = [], 0
     doc = pymupdf.open(pdf_path)
     try:
-        for i in range(min(len(doc), OCR_MAX_PAGES)):
+        total = len(doc)
+        for i in range(min(total, OCR_MAX_PAGES)):
             pix = doc[i].get_pixmap(matrix=pymupdf.Matrix(150 / 72, 150 / 72), alpha=False)
             img = PILImage.open(io.BytesIO(pix.tobytes("png"))).convert('L')
+            img = ImageOps.autocontrast(img, cutoff=1).filter(ImageFilter.SHARPEN)
             if max(img.size) > 1800:
                 img.thumbnail((1800, 1800))
             buf = io.BytesIO()
@@ -461,25 +542,60 @@ def _render_pages_b64(pdf_path):
     finally:
         doc.close()
         gc.collect()
-    return out
+    return out, total
 
-def extract_text_via_vision(pdf_path, groq_client=None):
-    """OCR a scanned/image PDF with a Groq vision model, page batch by batch.
-    Returns text ('' if the model saw nothing). Raises GroqUnavailable on API failure."""
-    pages = _render_pages_b64(pdf_path)
+def _groq_vision_ocr(pdf_path):
+    pages, total = _render_pages_b64(pdf_path)
     if not pages:
-        return ""
-    prompt = ("These are consecutive pages of a university exam question paper. "
-              "Transcribe ALL printed text exactly, in reading order. Keep question numbers "
-              "(Q1, Q2, a), b)) and marks. Plain text only, no commentary.")
+        return "", []
     parts = []
     for i in range(0, len(pages), OCR_PAGES_PER_REQUEST):
         content = [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}"}}
                    for b in pages[i:i + OCR_PAGES_PER_REQUEST]]
-        content.append({"type": "text", "text": prompt})
-        parts.append(groq_chat('vision', [{"role": "user", "content": content}],
-                               max_tokens=3500, temperature=0.0))
-    return clean_pdf_text('\n'.join(parts))
+        content.append({"type": "text", "text": OCR_PROMPT})
+        parts.append(groq_chat('vision', [{"role": "user", "content": content}], max_tokens=3500))
+    warns = [f"Only the first {OCR_MAX_PAGES} of {total} pages were read."] if total > OCR_MAX_PAGES else []
+    return '\n'.join(parts), warns
+
+def extract_text_via_vision(pdf_path, groq_client=None):
+    """Back-compat wrapper: Groq vision OCR of a PDF."""
+    return clean_pdf_text(_groq_vision_ocr(pdf_path)[0])
+
+def ocr_pdf(pdf_path, file_hash=None):
+    """OCR a scanned PDF. Gemini native PDF understanding first (if configured), Groq vision second.
+    Returns (text, provider, warnings). Raises GroqUnavailable only if every configured provider failed."""
+    if file_hash and file_hash in _ocr_cache:
+        t, p, w = _ocr_cache[file_hash]
+        return t, p, list(w) + ['Result reused from an earlier OCR of the identical file.']
+    errs, text, provider, warns = [], '', None, []
+    if get_gemini_keys() and os.path.getsize(pdf_path) <= GEMINI_PDF_MAX_BYTES:
+        try:
+            with open(pdf_path, 'rb') as f:
+                text = gemini_generate(OCR_PROMPT, pdf_bytes=f.read(), max_tokens=8000)
+            provider = 'gemini'
+        except GroqUnavailable as e:
+            errs.append(e)
+    if not text and get_groq_keys():
+        try:
+            text, warns = _groq_vision_ocr(pdf_path)
+            provider = 'groq'
+        except GroqUnavailable as e:
+            errs.append(e)
+    if not text:
+        if errs:
+            raise errs[-1] if len(errs) == 1 else errs[0]
+        raise GroqUnavailable('NO_OCR_PROVIDER', 'This looks like a scanned PDF but no OCR provider is configured.',
+                              'Set GEMINI_API_KEY and/or GROQ_API_KEY to read scanned papers.', 422, False)
+    ill = len(re.findall(r'\[illegible\]', text, re.I))
+    if ill:
+        warns.append(f"{ill} unreadable fragment(s) marked [illegible] — those questions may be incomplete.")
+    text = clean_pdf_text(text)
+    if len(text) < 200:
+        warns.append("OCR returned very little text; the scan may be blurry, cropped or low-contrast.")
+    if len(_ocr_cache) > 32:
+        _ocr_cache.clear()
+    _ocr_cache[file_hash or ''] = (text, provider, warns)
+    return text, provider, warns
 
 # ── STEP 1: EXTRACT QUESTIONS AS JSON ──
 def extract_questions_as_json(paper_name, text, client):
@@ -487,7 +603,7 @@ def extract_questions_as_json(paper_name, text, client):
 
 Paper: {paper_name}
 Text:
-{text[:5000]}
+{text[:9000]}
 
 Return ONLY a JSON array:
 [
@@ -498,14 +614,13 @@ Return ONLY a JSON array:
 Rules:
 - Include ALL questions from Q1a through Q6B
 - Each question gets unique id: paper_position
-- marks: 5 for Q1 parts, 10 for Q2-Q6, 0 if unclear
-- Extract exact question text
+- marks: exactly as printed in the paper; 0 if not printed or unclear (never guess)
+- Extract exact question text copied from the paper; NEVER invent or complete missing text
+- Omit a question entirely if its text is not present
 - Return ONLY the JSON array, no markdown"""
     for _attempt in range(2):
         try:
-            raw = groq_chat('text', [
-                {"role": "system", "content": "Extract exam questions as JSON array. No markdown."},
-                {"role": "user", "content": prompt}], max_tokens=2500)
+            raw = ai_text("Extract exam questions as JSON array. No markdown.", prompt, max_tokens=3500)
             raw = re.sub(r'^```(?:json)?\s*', '', raw.strip())
             raw = re.sub(r'\s*```$', '', raw).strip()
             i, j = raw.find('['), raw.rfind(']')
@@ -531,10 +646,27 @@ STOPWORDS = {
     'with','example','suitable','neat','diagram','detail','brief'
 }
 
-def tokenize(text):
+_SYN = {r'\bsvm\b': 'support vector machine', r'\bpca\b': 'principal component analysis',
+        r'\bknn\b': 'k nearest neighbor', r'k[\s-]?means': 'kmeans', r'\bnn\b': 'neural network',
+        r'\bnaive bayes(?:ian)?\b': 'naivebayes', r'\bover[\s-]?fit(?:ting)?\b': 'overfitting',
+        r'\bunder[\s-]?fit(?:ting)?\b': 'underfitting', r'\bbias[\s-]?variance\b': 'bias variance'}
+
+def _stem(t):
+    for suf in ('ing', 'ed', 'es', 's', 'ly'):
+        if len(t) > len(suf) + 3 and t.endswith(suf):
+            return t[:-len(suf)]
+    return t
+
+def _expand(text):
     text = text.lower()
+    for pat, rep in _SYN.items():
+        text = re.sub(pat, rep, text)
+    return text
+
+def tokenize(text):
+    text = _expand(text)
     text = re.sub(r'[^a-z0-9\s]', ' ', text)
-    return [t for t in text.split() if t not in STOPWORDS and len(t) > 2]
+    return [_stem(t) for t in text.split() if t not in STOPWORDS and len(t) > 2]
 
 def cosine_sim(v1, v2):
     common = set(v1) & set(v2)
@@ -560,7 +692,7 @@ def build_tfidf(questions):
     return vectors
 
 def match_topic(question_text, topic_keywords):
-    q_lower = question_text.lower()
+    q_lower = _expand(question_text)
     topic_words = tokenize(topic_keywords)
     if not topic_words: return False
     matches = sum(1 for w in topic_words if w in q_lower)
@@ -600,7 +732,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
                 if visited[j]: continue
                 if i < len(unmatched_vectors) and j < len(unmatched_vectors):
                     sim = cosine_sim(unmatched_vectors[i], unmatched_vectors[j])
-                    if sim > 0.4 and unmatched[i]['paper'] != unmatched[j]['paper']:
+                    if sim > 0.33 and unmatched[i]['paper'] != unmatched[j]['paper']:
                         cluster.append(unmatched[j])
                         visited[j] = True
             if len(cluster) >= 2:
@@ -622,7 +754,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
         papers = [q['paper'] for q in unique_questions]
         if len(papers) < 2: continue
         freq = len(papers)
-        importance = 'HIGH' if freq >= 3 else 'MEDIUM' if freq == 2 else 'LOW'
+        importance = importance_for(freq, num_papers)
         marks = [q.get('marks', 0) for q in unique_questions]
         marks_nonzero = [m for m in marks if m > 0]
         positions = [q.get('position', '') for q in unique_questions]
@@ -660,7 +792,7 @@ def cluster_questions_python(all_questions, subject, num_papers):
         cluster['frequency'] = len(cluster['papers'])
         if cluster['frequency'] < 2: continue
         f = cluster['frequency']
-        cluster['importance'] = 'HIGH' if f >= 3 else 'MEDIUM' if f == 2 else 'LOW'
+        cluster['importance'] = importance_for(f, num_papers)
         deduped.append(cluster)
 
     return deduped[:15]
@@ -921,9 +1053,8 @@ RULES — strictly follow:
 
     for attempt in range(3):
         try:
-            raw = groq_chat('text', [
-                {"role": "system", "content": "Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after."},
-                {"role": "user", "content": prompt}], max_tokens=3500)
+            raw = ai_text("Return ONLY valid JSON. Start with { end with }. No markdown. No text before or after.",
+                          prompt, max_tokens=3500)
             raw = re.sub(r'^```(?:json)?\s*', '', raw.strip())
             raw = re.sub(r'\s*```$', '', raw)
             start = raw.find('{')
@@ -1033,146 +1164,323 @@ def parse_paper_name(filename):
 def index():
     return render_template('index.html')
 
+MAX_FILES = 8
+MAX_FILE_BYTES = 15 * 1024 * 1024
+DUP_SIMILARITY = 0.85
+PREDICTION_DISCLAIMER = ("Predictions are estimates based on how often topics appeared in the uploaded papers. "
+                         "They are not guaranteed questions and are not a measured accuracy.")
+
+def _tok_set(t): return set(tokenize(t))
+
+def annotate_clusters(clusters, total_unique, papers, qlookup):
+    for c in clusters:
+        refs, uncertain = [], []
+        aligned_marks = []
+        for i, p in enumerate(c.get('papers', [])):
+            pos = c['question_positions'][i] if i < len(c['question_positions']) else ''
+            q = qlookup.get((p, pos), {})
+            m = q.get('marks', 0) or 0
+            aligned_marks.append(m)
+            info = papers.get(p, {})
+            refs.append({'paper': p, 'position': pos, 'marks': m, 'question': c['questions'][i] if i < len(c['questions']) else '',
+                         'extraction': info.get('method', '')})
+            if q.get('uncertain'):
+                uncertain.append(f"{p} {pos}: question text may be incomplete")
+            if str(info.get('method', '')).startswith('ocr'):
+                uncertain.append(f"{p}: read via OCR")
+        c['marks_each_time'] = aligned_marks
+        nz = [m for m in aligned_marks if m > 0]
+        c['consistent_marks'] = len(set(nz)) == 1 if len(nz) > 1 else False
+        c['references'] = refs
+        c['unique_papers_with_topic'] = c['frequency']
+        c['total_unique_papers'] = total_unique
+        c['frequency_label'] = f"{c['frequency']} of {total_unique} unique papers"
+        c['uncertainty'] = sorted(set(uncertain))
+        c['confidence'] = 'low' if any('incomplete' in u for u in uncertain) else ('medium' if uncertain else 'high')
+    return clusters
+
+def build_year_trends(papers, clusters):
+    rows = []
+    for name, p in sorted(papers.items(), key=lambda x: x[1]['sort_key']):
+        qs = p.get('questions', [])
+        rows.append({'paper': name, 'period': p['meta'].get('period') or '', 'year': p['meta'].get('year'),
+                     'session': p['meta'].get('session') or '', 'questions': len(qs),
+                     'marks_total': sum(q.get('marks', 0) or 0 for q in qs),
+                     'marks_distribution': marks_distribution(qs),
+                     'repeated_topics': [c['topic'] for c in clusters if name in c.get('papers', [])]})
+    return rows
+
+def run_backtest(all_questions, papers, subject):
+    """Hold out the newest dated paper; check how many of its questions fall in topics that earlier
+    papers already flagged as repeating. A genuine out-of-sample check — only with >=3 unique papers."""
+    dated = {n: p for n, p in papers.items() if p['sort_key'] > 0}
+    if len(papers) < 3 or len(dated) < 2:
+        return {'available': False, 'reason': 'Needs at least 3 unique papers with identifiable dates; '
+                'predictions are therefore unvalidated estimates.'}
+    held = max(dated, key=lambda n: dated[n]['sort_key'])
+    train_q = [q for q in all_questions if q['paper'] != held]
+    held_q = [q for q in all_questions if q['paper'] == held]
+    if len(held_q) < 3:
+        return {'available': False, 'reason': f'Too few questions were extracted from {held} to validate.'}
+    clusters = cluster_questions_python(train_q, subject, len(papers) - 1)
+    if not clusters:
+        return {'available': False, 'reason': 'No repeating topics were found in the earlier papers to test.'}
+    hits = 0
+    for q in held_q:
+        qt = _tok_set(q['question'])
+        ok = False
+        for c in clusters:
+            if match_topic(q['question'], c['topic']):
+                ok = True; break
+            for cq in c['questions']:
+                s = _tok_set(cq)
+                if qt and s and len(qt & s) / len(qt | s) >= 0.3:
+                    ok = True; break
+            if ok: break
+        hits += ok
+    return {'available': True, 'held_out_paper': held, 'train_papers': len(papers) - 1,
+            'held_out_questions': len(held_q), 'matched_questions': hits,
+            'hit_rate_pct': round(100 * hits / len(held_q), 1),
+            'note': (f"Back-test: {hits} of {len(held_q)} questions in {held} (unseen) belonged to topics already "
+                     f"repeating in the {len(papers) - 1} earlier papers. Small sample — indicative only.")}
+
+def attach_prediction_evidence(predictions, clusters, total_unique):
+    for p in predictions:
+        pt = _tok_set(str(p.get('topic', '')) + ' ' + str(p.get('question', '')))
+        best, bs = None, 0.0
+        for c in clusters:
+            ct = _tok_set(c['topic'] + ' ' + ' '.join(c['questions']))
+            s = len(pt & ct) / max(len(pt | ct), 1)
+            if s > bs: best, bs = c, s
+        if best is not None and bs >= 0.12:
+            p['basis'] = 'repeated-topic'
+            p['historical_frequency'] = best['frequency_label']
+            p['evidence'] = best['references']
+            p['frequency'] = best['frequency']
+            p['priority'] = best['importance']
+        else:
+            p['basis'] = 'model-suggestion'
+            p['historical_frequency'] = 'No matching repeated topic found in the uploaded papers'
+            p['evidence'] = []
+            p['priority'] = 'LOW'
+        p['label'] = 'Estimate'
+    return predictions
+
+@app.route('/api/providers')
+def api_providers():
+    return jsonify(provider_status())
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    import uuid
     if 'files' not in request.files:
         return err_response('NO_FILES', 'No files uploaded.', '', 400)
     files = request.files.getlist('files')
     if len(files) < 2:
         return err_response('MIN_FILES', 'Upload at least 2 PYQ papers.',
-                             'Ashlysis needs at least 2 papers to detect repeat patterns.', 400)
-    if len(files) > 6:
-        return err_response('MAX_FILES', 'Maximum 6 papers for best results.', '', 400)
-    non_pdf = [f.filename for f in files if not f.filename.lower().endswith('.pdf')]
+                             'Ashlysis needs at least 2 different papers to detect repeat patterns.', 400)
+    if len(files) > MAX_FILES:
+        return err_response('MAX_FILES', f'Maximum {MAX_FILES} papers per analysis.', '', 400)
+    non_pdf = [f.filename for f in files if not (f.filename or '').lower().endswith('.pdf')]
     if non_pdf:
         return err_response('INVALID_FILE_TYPE', 'Only PDF files are supported.',
                              f'Remove: {", ".join(non_pdf)}', 400)
 
     user_name = request.form.get('user_name', 'Student').strip() or 'Student'
-    user_name = re.sub(r'[^a-zA-Z0-9 ]', '', user_name)[:30]
-    subject = request.form.get('subject', 'general').strip()
-
-    if not get_groq_keys():
-        return err_response('NOT_CONFIGURED', 'Service not configured.',
-                             'No GROQ_API_KEY is set on the server.', 500)
+    user_name = re.sub(r'[^a-zA-Z0-9 ]', '', user_name)[:30] or 'Student'
+    subject_choice = request.form.get('subject', 'auto').strip().lower()
+    if subject_choice not in SUBJECT_NAMES:
+        subject_choice = 'auto'
 
     try:
         check_quota()
     except Exception as e:
         return err_response('DAILY_LIMIT', str(e), 'Please try again tomorrow.', 429)
-
-    acquired = _analysis_lock.acquire(blocking=False)
-    if not acquired:
+    if not _analysis_lock.acquire(blocking=False):
         return err_response('SERVER_BUSY', 'Server is busy. Please wait 30 seconds and try again.',
                              '', 429, retryable=True)
 
-    client = None
-    all_papers_text = {}
-    paper_stats = {}
-    ocr_used = []
-
+    papers, seen_hashes, duplicates, ocr_used = {}, {}, [], []
+    run_warnings = []
     try:
         for file in files:
-            if not (file and file.filename.lower().endswith('.pdf')): continue
-            filename = secure_filename(file.filename)
-            paper_name, sort_key = parse_paper_name(filename)
-            base = paper_name; c = 1
-            while paper_name in all_papers_text:
-                paper_name = f"{base}_{c}"; c += 1
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(filepath)
+            filename = secure_filename(file.filename) or 'paper.pdf'
+            tmp = os.path.join(app.config['UPLOAD_FOLDER'], f'{uuid.uuid4().hex}.pdf')
+            file.save(tmp)
             try:
+                if os.path.getsize(tmp) > MAX_FILE_BYTES:
+                    return err_response('FILE_TOO_LARGE', f'"{filename}" is larger than {MAX_FILE_BYTES // 1048576} MB.',
+                                         'Compress the PDF or split it.', 413)
+                with open(tmp, 'rb') as fh:
+                    if fh.read(5) != b'%PDF-':
+                        return err_response('CORRUPTED_PDF', f'"{filename}" is not a valid PDF.', '', 400)
+                h = sha256_file(tmp)
+                if h in seen_hashes:
+                    duplicates.append({'file': filename, 'duplicate_of': seen_hashes[h],
+                                       'reason': 'Identical file (same SHA-256 hash)', 'similarity': 1.0})
+                    continue
+                seen_hashes[h] = filename
                 try:
-                    text, method, page_count = extract_text_from_pdf(filepath)
+                    text, method, page_count = extract_text_from_pdf(tmp)
                 except PDFProcessingError as pe:
                     return err_response(pe.code, f'"{filename}": {pe.message}', pe.details, 400,
                                          retryable=(pe.code not in ('ENCRYPTED_PDF', 'CORRUPTED_PDF', 'EMPTY_PDF')))
-
+                warnings = []
                 if is_scanned_pdf(text):
-                    # Both cheap text-layer extractors came back thin — only now
-                    # consider the expensive vision-OCR path (last resort).
-                    if ocr_used:  # not first OCR call this request — pace requests
-                        time.sleep(12)
-                    vt = ""
+                    vt, prov, w = '', None, []
                     try:
-                        vt = extract_text_via_vision(filepath)
+                        vt, prov, w = ocr_pdf(tmp, h)
                     except GroqUnavailable as ge:
                         if not text or len(text.strip()) < 50:
                             return err_response(ge.code, f'"{filename}": {ge.message}', ge.details,
                                                  ge.status, retryable=ge.retryable)
+                        warnings.append(f"OCR unavailable ({ge.message}); using the partial text layer — extraction may be incomplete.")
                     except Exception as oe:
-                        log.warning('OCR render failed: %s', type(oe).__name__)
+                        log.warning('OCR failed: %s', type(oe).__name__)
                     if vt and len(vt.strip()) > 50:
-                        text = vt
-                        method = 'vision_ocr'
-                        ocr_used.append(paper_name)
+                        text, method = vt, f'ocr_{prov}'
+                        warnings += w
                     elif not text or len(text.strip()) < 50:
-                        return err_response(
-                            'SCANNED_NO_TEXT',
-                            f'"{filename}" doesn\'t contain readable text.',
-                            "Neither the text layer nor OCR could read this file. "
-                            "It may be a scanned image, a photo of a paper, or use "
-                            "an unusual font. Try re-exporting the PDF from the "
-                            "original source, or a clearer scan.",
-                            400, retryable=True)
-                all_papers_text[paper_name] = (text, sort_key)
-                paper_stats[paper_name] = {
-                    'pages': page_count, 'chars': len(text),
-                    'ocr': paper_name in ocr_used, 'method': method
-                }
-            except PDFProcessingError as pe:
-                return err_response(pe.code, f'"{filename}": {pe.message}', pe.details, 400)
+                        return err_response('SCANNED_NO_TEXT', f'"{filename}" doesn\'t contain readable text.',
+                            "Neither the text layer nor OCR could read this file. It may be a very blurry scan, "
+                            "a photo of a paper, or use an unusual font. Try a clearer scan.", 400, retryable=True)
+                    else:
+                        warnings.append("OCR returned too little text; using the partial text layer — extraction may be incomplete.")
+                meta = detect_metadata(text, filename)
+                dup_of = None
+                for n, p in papers.items():
+                    sim = content_similarity(text, p['text'])
+                    pa, pb = meta['period'], p['meta']['period']
+                    if sim >= DUP_SIMILARITY and (not (pa and pb) or pa == pb):
+                        dup_of = (n, sim); break
+                if dup_of:
+                    duplicates.append({'file': filename, 'duplicate_of': papers[dup_of[0]]['file'],
+                                       'reason': 'Same content (text similarity)', 'similarity': round(dup_of[1], 3)})
+                    continue
+                paper_name, sort_key = parse_paper_name(filename)
+                if not re.search(r'20\d\d', filename) and meta['period']:
+                    paper_name = meta['period'].replace(' ', '_'); sort_key = meta['sort_key']
+                elif meta['year'] and re.search(r'20\d\d', filename):
+                    fy = int(re.search(r'20\d\d', filename).group())
+                    if fy != meta['year']:
+                        warnings.append(f"Filename says {fy} but the paper text says {meta['year']}; filename used.")
+                base, c = paper_name, 1
+                while paper_name in papers:
+                    paper_name = f"{base}_{c}"; c += 1
+                if method.startswith('ocr'):
+                    ocr_used.append(paper_name)
+                papers[paper_name] = {'text': text, 'sort_key': sort_key, 'meta': meta, 'method': method,
+                                      'pages': page_count, 'file': filename, 'warnings': warnings}
             except Exception as e:
+                if isinstance(e, GroqUnavailable):
+                    raise
                 return err_response('SERVER_ERROR', f'Something went wrong processing "{filename}".',
-                                     str(e), 500, retryable=True)
+                                     _redact(e), 500, retryable=True)
             finally:
-                if os.path.exists(filepath): os.remove(filepath)
+                if os.path.exists(tmp): os.remove(tmp)
                 gc.collect()
 
-        if len(all_papers_text) < 2:
-            return err_response('MIN_READABLE_FILES', 'Need at least 2 readable papers.', '', 400)
+        N = len(papers)
+        if N < 2:
+            dtxt = f" {len(duplicates)} duplicate(s) were removed." if duplicates else ''
+            return err_response('NOT_ENOUGH_UNIQUE', f'Only {N} unique paper found.',
+                                 f'Ashlysis needs at least 2 different papers.{dtxt}', 400)
 
-        all_questions = []
-        sorted_papers = sorted(all_papers_text.items(), key=lambda x: x[1][1], reverse=True)
-        for paper_name, (text, _) in sorted_papers:
-            # Refresh client each paper — picks up any key rotation that happened
+        # ── subject / code detection ──
+        votes = Counter()
+        for p in papers.values():
+            if p['meta']['subject']:
+                votes[p['meta']['subject']] += {'high': 3, 'medium': 2, 'low': 1}.get(p['meta']['subject_confidence'], 1)
+        detected = votes.most_common(1)[0][0] if votes else None
+        strong = any(p['meta']['subject'] == detected and p['meta']['subject_confidence'] == 'high' for p in papers.values())
+        subject, detection_note = 'general', ''
+        if subject_choice == 'auto':
+            subject = detected or 'general'
+            detection_note = 'Detected from paper text.' if detected else 'Could not identify the subject from the papers.'
+        elif detected and detected != subject_choice and strong:
+            subject = detected
+            detection_note = (f"You selected {SUBJECT_NAMES[subject_choice]}, but the papers clearly look like "
+                              f"{SUBJECT_NAMES[detected]}; analysed as {SUBJECT_NAMES[detected]}.")
+            run_warnings.append(detection_note)
+        else:
+            subject = subject_choice
+            detection_note = 'Using your selection.' + (f" (Text suggests {SUBJECT_NAMES[detected]}.)" if detected and detected != subject_choice else '')
+        codes = Counter(p['meta']['subject_code'] for p in papers.values() if p['meta']['subject_code'])
+        subject_code = codes.most_common(1)[0][0] if codes else None
+
+        # ── question extraction ──
+        all_questions, ai_note = [], False
+        for paper_name, p in sorted(papers.items(), key=lambda x: x[1]['sort_key'], reverse=True):
+            ctext = clean_pdf_text(p['text'])
+            qs, src = [], 'ai'
             try:
-                questions = extract_questions_as_json(paper_name, clean_pdf_text(text), client)
+                qs = extract_questions_as_json(paper_name, ctext, None)
             except GroqUnavailable as ge:
-                if ge.code in ('GROQ_AUTH', 'NOT_CONFIGURED'):
-                    return err_response(ge.code, ge.message, ge.details, ge.status, retryable=ge.retryable)
-                questions = []
-            if questions:
-                all_questions.extend(questions)
-            else:
-                lines = clean_pdf_text(text).split('\n')
-                for line in lines:
-                    if re.search(r'Q\d+|explain|describe|define', line, re.I) and len(line) > 20:
-                        all_questions.append({'id': f"{paper_name}_{len(all_questions)}", 'paper': paper_name, 'position': '', 'marks': 0, 'question': line[:300]})
-            time.sleep(1)
-            gc.collect()
+                p['warnings'].append(f"AI extraction unavailable ({ge.code}); rule-based parser used.")
+            kept = [q for q in qs if isinstance(q, dict) and q.get('question') and question_supported_by_text(q['question'], p['text'])]
+            if len(kept) < len(qs):
+                p['warnings'].append(f"{len(qs) - len(kept)} AI-returned question(s) were dropped because their text was not found in the paper.")
+            if not kept:
+                kept, src = local_parse_questions(ctext, paper_name), 'local'
+                if qs or not get_groq_keys() and not get_gemini_keys():
+                    p['warnings'].append("Questions were extracted with the rule-based parser.")
+            seen_ids = set()
+            for q in kept:
+                try: q['marks'] = int(q.get('marks') or 0)
+                except Exception: q['marks'] = 0
+                q['position'] = str(q.get('position', ''))
+                qid = f"{paper_name}_{q['position'] or len(seen_ids)}"
+                while qid in seen_ids: qid += '_x'
+                seen_ids.add(qid)
+                q.update({'id': qid, 'paper': paper_name, 'source': src})
+                q['uncertain'] = len(q['question'].strip()) < 20 or '[illegible]' in q['question'].lower()
+            if len(kept) < 4:
+                p['warnings'].append(f"Only {len(kept)} question(s) detected; the extraction may be incomplete.")
+            p['questions'] = kept
+            all_questions.extend(kept)
+            time.sleep(0.3); gc.collect()
 
-        clusters = cluster_questions_python(all_questions, subject, len(all_papers_text))
+        if not all_questions:
+            return err_response('NO_QUESTIONS', 'No questions could be extracted.',
+                                 'The text was readable but no question structure (Q1, Q2 ...) was found.', 422)
 
-        # Build paper strategy — pure Python, zero API calls
+        clusters = cluster_questions_python(all_questions, subject, N)
+        qlookup = {(q['paper'], q['position']): q for q in all_questions}
+        annotate_clusters(clusters, N, papers, qlookup)
         paper_strategy = build_paper_strategy(clusters, all_questions, subject)
-
-        enrichment = enrich_with_groq(clusters, user_name, subject, client)
-
-        # ── GUARANTEED: predictions and last_hour_prep always present ──
+        enrichment = enrich_with_groq(clusters, user_name, subject, None)
         predictions = enrichment.get('predictions', [])
         last_hour_prep = enrichment.get('last_hour_prep', {})
-
-        # Final safety net
         if not predictions:
-            predictions = [{'question': c['questions'][0] if c['questions'] else c['topic'], 'topic': c['topic'], 'confidence': c['importance'], 'reason': f"Appeared {c['frequency']} times", 'likely_position': c['question_positions'][0] if c['question_positions'] else 'Q2A', 'likely_marks': c['marks_each_time'][0] if c['marks_each_time'] else 10, 'frequency': c['frequency']} for c in clusters[:10]]
+            predictions = [{'question': c['questions'][0] if c['questions'] else c['topic'], 'topic': c['topic'],
+                            'confidence': c['importance'], 'reason': f"Appeared in {c['frequency_label']}",
+                            'likely_position': c['question_positions'][0] if c['question_positions'] else 'Q2A',
+                            'likely_marks': next((m for m in c['marks_each_time'] if m), 10),
+                            'frequency': c['frequency']} for c in clusters[:10]]
         if not last_hour_prep.get('must_do'):
-            last_hour_prep = {'message': f"Stay focused, {user_name}.", 'passing_strategy': "Attempt Q1 (20m) + any 2 from Q2-Q6 (40m) = 60m minimum.", 'must_do': [{'rank': i+1, 'topic': c['topic'], 'question': c['questions'][0][:200] if c['questions'] else c['topic'], 'marks': c['marks_each_time'][0] if c['marks_each_time'] else 10, 'position': c['question_positions'][0] if c['question_positions'] else '', 'why': f"Appeared {c['frequency']} times", 'quick_tip': 'Draw diagram, cover all components, give example.'} for i, c in enumerate(clusters[:5])]}
-
+            last_hour_prep = {'message': f"Stay focused, {user_name}.",
+                'passing_strategy': "Attempt Q1 (20m) + any 2 from Q2-Q6 (40m) = 60m minimum.",
+                'must_do': [{'rank': i + 1, 'topic': c['topic'], 'question': (c['questions'][0][:200] if c['questions'] else c['topic']),
+                             'marks': next((m for m in c['marks_each_time'] if m), 10),
+                             'position': c['question_positions'][0] if c['question_positions'] else '',
+                             'why': f"Appeared in {c['frequency_label']}", 'quick_tip': 'Draw diagram, cover all components, give example.'}
+                            for i, c in enumerate(clusters[:5])]}
+        attach_prediction_evidence(predictions, clusters, N)
+        backtest = run_backtest(all_questions, papers, subject)
+        trends = build_year_trends(papers, clusters)
+        paper_details = [{'paper': n, 'file': p['file'], 'period': p['meta']['period'], 'year': p['meta']['year'],
+                          'session': p['meta']['session'], 'pages': p['pages'], 'method': p['method'],
+                          'questions': len(p.get('questions', [])), 'warnings': p['warnings']}
+                         for n, p in sorted(papers.items(), key=lambda x: x[1]['sort_key'])]
+        paper_stats = {n: {'pages': p['pages'], 'chars': len(p['text']), 'ocr': n in ocr_used, 'method': p['method']}
+                       for n, p in papers.items()}
+        all_warn = list(run_warnings)
+        for pd_ in paper_details:
+            all_warn += [f"{pd_['paper']}: {w}" for w in pd_['warnings']]
     except GroqUnavailable as ge:
         return err_response(ge.code, ge.message, ge.details, ge.status, retryable=ge.retryable)
     except Exception as e:
-        return err_response('SERVER_ERROR', 'Something went wrong during analysis.', str(e), 500, retryable=True)
+        return err_response('SERVER_ERROR', 'Something went wrong during analysis.', _redact(e), 500, retryable=True)
     finally:
         gc.collect()
         _analysis_lock.release()
@@ -1181,19 +1489,41 @@ def analyze():
         'success': True,
         'clusters': clusters,
         'predictions': predictions,
+        'prediction_disclaimer': PREDICTION_DISCLAIMER,
+        'backtest': backtest,
         'last_hour_prep': last_hour_prep,
         'paper_strategy': paper_strategy,
         'user_name': user_name,
         'subject': subject.upper(),
+        'subject_name': SUBJECT_NAMES.get(subject, subject),
+        'subject_code': subject_code,
+        'subject_detection': detection_note,
         'ocr_used': ocr_used,
+        'duplicates': duplicates,
+        'paper_details': paper_details,
+        'year_trends': trends,
+        'warnings': all_warn,
+        'providers': provider_status(),
         'stats': {
-            'papers': len(all_papers_text),
+            'uploaded': len(files),
+            'papers': N,
+            'duplicates_removed': len(duplicates),
             'total_questions': len(all_questions),
             'clusters': len(clusters),
             'high_priority': len([c for c in clusters if c.get('importance') == 'HIGH']),
             'paper_stats': paper_stats
         }
     })
+
+@app.route('/export_pdf', methods=['POST'])
+def export_pdf():
+    from report_pdf import build_report_pdf
+    data = request.get_json(silent=True) or {}
+    if not data.get('clusters') and not data.get('predictions'):
+        return err_response('NO_DATA', 'Nothing to export.', 'Run an analysis first.', 400)
+    pdf = build_report_pdf(data)
+    return send_file(io.BytesIO(pdf), mimetype='application/pdf', as_attachment=True,
+                     download_name=f"ashlysis_report_{datetime.now().strftime('%Y%m%d')}.pdf")
 
 
 @app.route('/export', methods=['POST'])

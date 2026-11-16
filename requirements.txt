@@ -1,8 +1,10 @@
 flask
 groq
+google-genai
 pdfplumber
 pdfminer.six
 werkzeug
 pillow
 PyMuPDF
+reportlab
 gunicorn

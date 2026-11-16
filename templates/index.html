@@ -862,6 +862,19 @@ footer{
 .usage-dot{width:5px;height:5px;border-radius:50%;background:var(--a-dark);animation:pulse2 2s ease-in-out infinite;flex-shrink:0}
 @keyframes pulse2{0%,100%{opacity:1}50%{opacity:0.4}}
 
+.prov-status{margin-top:8px;font-size:12px;color:var(--muted)}
+.prov-status b{font-weight:600}.prov-ok{color:#16a34a}.prov-no{color:#94a3b8}
+.audit{border:1px solid rgba(148,163,184,.4);border-radius:14px;padding:16px;margin:0 0 18px;font-size:13px}
+.audit h4{margin:0 0 8px;font-size:14px}.audit table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 10px}
+.audit th,.audit td{text-align:left;padding:5px 8px;border-bottom:1px solid rgba(148,163,184,.3)}
+.audit .warn{color:#b45309;margin:3px 0}.audit .dup{color:#64748b;margin:3px 0}
+.bar-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px}
+.bar-row .bl{flex:0 0 38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row .bt{flex:1;background:rgba(148,163,184,.25);border-radius:6px;height:10px}
+.bar-row .bf{height:10px;border-radius:6px;background:#6366f1}
+.bar-row .bn{flex:0 0 auto;color:var(--muted)}
+.estnote{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5}
+.pev{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -932,10 +945,11 @@ footer{
   <div class="upload-grid">
     <div class="ucard">
       <div class="ucard-title">Upload PYQ Papers</div>
-      <div class="ucard-sub">// 2–6 papers · PDF only · text or scanned</div>
+      <div class="ucard-sub">// 2–8 papers · PDF only · text or scanned</div>
       <div class="subject-row">
         <label class="field-label" for="subjectSelect">Subject</label>
         <select id="subjectSelect">
+          <option value="auto" selected>Auto-detect from papers (recommended)</option>
           <option value="spcc">System Programming & Compiler Construction</option>
           <option value="dbms">Database Management Systems</option>
           <option value="os">Operating Systems</option>
@@ -946,13 +960,14 @@ footer{
           <option value="ml">Machine Learning</option>
           <option value="general">Other Subject</option>
         </select>
+        <div id="providerStatus" class="prov-status"></div>
       </div>
       <div class="dropzone" id="dz" role="button" tabindex="0" aria-label="Upload PDF papers, minimum 2 maximum 6"
            onclick="document.getElementById('fileinput').click()"
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileinput').click()}">
         <span class="dz-icon" aria-hidden="true">📄</span>
         <div class="dz-title">Drop PDF Papers Here</div>
-        <p class="dz-sub">or click to browse · <b>minimum 2, maximum 6 papers</b></p>
+        <p class="dz-sub">or click to browse · <b>minimum 2, maximum 8 papers</b></p>
       </div>
       <input type="file" id="fileinput" multiple accept=".pdf">
       <div class="filelist" id="filelist"></div>
@@ -1025,7 +1040,8 @@ footer{
       <div class="rh-meta" id="resultsMeta"></div>
     </div>
     <div class="rh-btns">
-      <button class="btn-sm primary" onclick="exportReport()">↓ Export Report</button>
+      <button class="btn-sm primary" onclick="exportPdf()">↓ PDF Report</button>
+      <button class="btn-sm" onclick="exportReport()">↓ Text</button>
       <button class="btn-sm" onclick="resetApp()">← New Analysis</button>
     </div>
   </div>
@@ -1141,7 +1157,7 @@ dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');addFiles(Array.from(e.dataTransfer.files))});
 document.getElementById('fileinput').addEventListener('change',e=>{addFiles(Array.from(e.target.files));e.target.value=''});
 
-const MAX_FILES=6, MAX_FILE_SIZE=20*1024*1024; // 20MB/file — generous for a scanned exam paper, well under the server's 50MB total request cap
+const MAX_FILES=8, MAX_FILE_SIZE=15*1024*1024; // 20MB/file — generous for a scanned exam paper, well under the server's 50MB total request cap
 function warnFile(msg){
   const w=document.getElementById('filewarn');
   w.textContent='⚠ '+msg;w.classList.add('on');
@@ -1239,12 +1255,13 @@ function showResults(data){
   const{clusters,predictions,last_hour_prep,paper_strategy,stats,user_name,subject,ocr_used}=data;
   document.getElementById('resultsGreeting').textContent=`Hey ${user_name} — ${subject} analysis complete`;
   const ocrNote=ocr_used?.length?` · OCR used`:'';
-  document.getElementById('resultsMeta').textContent=`${stats.papers} papers · ${stats.clusters} repeat patterns · ${predictions.length} predictions${ocrNote}`;
+  document.getElementById('resultsMeta').textContent=`${stats.papers} unique papers${stats.duplicates_removed?' ('+stats.uploaded+' uploaded)':''} · ${stats.clusters} repeat patterns · ${predictions.length} predictions${ocrNote}`;
   document.getElementById('statStrip').innerHTML=[
-    [stats.papers,'Papers'],[stats.clusters,'Repeats'],
+    [stats.papers,'Unique papers'+(stats.duplicates_removed?` (${stats.duplicates_removed} dup removed)`:'')],[stats.clusters,'Repeats'],
     [stats.high_priority,'HIGH Priority'],[predictions.length,'Predictions'],
   ].map(([n,l])=>`<div class="sc"><div class="sc-num">${n}</div><div class="sc-lbl">${l}</div></div>`).join('');
   document.getElementById('tb1').textContent=clusters.length;
+  renderAudit(data);
   document.getElementById('tb2').textContent=predictions.length;
 
   // Repeats
@@ -1265,13 +1282,14 @@ function showResults(data){
             ${marks.filter(m=>m>0).length?`<span class="ctag marks">📝 ${[...new Set(marks.filter(m=>m>0))].join('/')}m${c.consistent_marks?' ✓':''}</span>`:''}
             ${c.consistent_position?`<span class="ctag same">Always same pos</span>`:''}
           </div>
-          <div class="cpapers">📄 ${papers.join(' · ')}</div>
+          <div class="cpapers">📄 ${c.frequency_label?c.frequency_label+' — ':''}${papers.join(' · ')}${c.confidence?' · confidence: '+c.confidence:''}</div>
         </div>
         <span class="cbadge ${c.importance}">${c.importance}</span>
         <span class="study-check${isStudied?' done':''}" onclick="event.stopPropagation();toggleStudied(${i},'${c.topic.replace(/'/g,'')}')" title="Mark as studied"></span>
         <span class="cchev">▶</span>
       </div>
       <div class="cbody">
+        ${(c.uncertainty||[]).length?`<div class="cpnote">⚠ ${c.uncertainty.join(' · ')}</div>`:''}
         ${c.pattern_note?`<div class="cpnote">📊 ${c.pattern_note}</div>`:''}
         ${c.tip?`<div class="ctip"><span>💡</span><span>${c.tip}</span></div>`:''}
         <div class="qlist">${(c.questions||[]).map((q,qi)=>`
@@ -1289,18 +1307,21 @@ function showResults(data){
   }).join('');
 
   // Predictions
+  {let n=document.getElementById('predNote');if(!n){n=document.createElement('div');n.id='predNote';n.className='estnote';document.getElementById('predList').before(n)}
+   const bt=data.backtest||{};n.textContent=(data.prediction_disclaimer||'')+' '+(bt.available?bt.note:'Not validated: '+(bt.reason||'no unseen paper.'));}
   document.getElementById('predList').innerHTML=Array.isArray(predictions)&&predictions.length
     ?predictions.map((p,i)=>`
-      <div class="pcard ${p.confidence||'MEDIUM'}" style="animation-delay:${i*0.04}s">
+      <div class="pcard ${p.priority||p.confidence||'MEDIUM'}" style="animation-delay:${i*0.04}s">
         <div class="pcard-top"><div class="pcard-n">${String(i+1).padStart(2,'0')}</div><div class="pcard-q">${p.question||p.topic}</div></div>
         <div class="pmeta">
-          <span class="ptag c-${p.confidence||'MEDIUM'}">${p.confidence||'MEDIUM'}</span>
+          <span class="ptag c-${p.priority||p.confidence||'MEDIUM'}">${p.priority||p.confidence||'MEDIUM'} priority · estimate</span>
           ${p.likely_position?`<span class="ptag pos">📍 ${p.likely_position}</span>`:''}
           ${p.likely_marks?`<span class="ptag marks">📝 ~${p.likely_marks}m</span>`:''}
           ${p.topic?`<span class="ptag topic">${p.topic}</span>`:''}
-          ${p.frequency?`<span class="ptag seen">Seen ${p.frequency}×</span>`:''}
+          ${p.historical_frequency?`<span class="ptag seen">${p.historical_frequency}</span>`:(p.frequency?`<span class="ptag seen">Seen ${p.frequency}×</span>`:'')}
         </div>
         ${p.reason?`<div class="preason">Why → ${p.reason}</div>`:''}
+        ${(p.evidence||[]).length?`<div class="pev">Evidence: ${p.evidence.slice(0,4).map(r=>`${r.paper} ${r.position}`).join(' · ')}</div>`:(p.basis==='model-suggestion'?'<div class="pev">No direct match in previous papers — model suggestion.</div>':'')}
       </div>`).join('')
     :'<p style="color:var(--muted);font-size:13px;padding:20px 0">Predictions will appear here after analysis.</p>';
 
@@ -1505,6 +1526,37 @@ async function exportReport(){
   const blob=await res.blob();
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ashlysis_report.txt';a.click();
 }
+async function exportPdf(){
+  if(!lastData)return;
+  try{
+    const res=await fetch('/export_pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(lastData)});
+    if(!res.ok){const j=await res.json().catch(()=>({}));alert((j.error&&j.error.message)||'Could not create the PDF.');return}
+    const blob=await res.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ashlysis_report.pdf';a.click();
+  }catch(e){alert('Could not create the PDF. Check your connection.')}
+}
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderAudit(d){
+  let el=document.getElementById('auditPanel');
+  if(!el){el=document.createElement('div');el.id='auditPanel';el.className='audit';document.getElementById('statStrip').after(el)}
+  const N=(d.stats&&d.stats.papers)||0;
+  const pd=(d.paper_details||[]).map(p=>`<tr><td>${esc(p.paper)}</td><td>${esc(p.period||'—')}</td><td>${esc(p.method)}</td><td>${esc(p.pages)}</td><td>${esc(p.questions)}</td></tr>`).join('');
+  const dups=(d.duplicates||[]).map(x=>`<div class="dup">♻ ${esc(x.file)} = ${esc(x.duplicate_of)} — ${esc(x.reason)}, not counted twice</div>`).join('');
+  const warns=(d.warnings||[]).map(w=>`<div class="warn">⚠ ${esc(w)}</div>`).join('');
+  const bars=(d.clusters||[]).slice(0,10).map(c=>`<div class="bar-row"><span class="bl" title="${esc(c.topic)}">${esc(c.topic)}</span><span class="bt"><span class="bf" style="display:block;width:${Math.round(100*c.frequency/Math.max(N,1))}%"></span></span><span class="bn">${c.frequency}/${N}</span></div>`).join('');
+  el.innerHTML=`<h4>${esc(d.subject_name||d.subject)}${d.subject_code?' · '+esc(d.subject_code):''}</h4>
+    <div class="dup">${esc(d.subject_detection||'')}</div>
+    <div style="margin:6px 0"><b>${N}</b> unique of <b>${(d.stats&&d.stats.uploaded)||N}</b> uploaded</div>${dups}
+    <table><tr><th>Paper</th><th>Period</th><th>Read via</th><th>Pages</th><th>Questions</th></tr>${pd}</table>
+    ${warns||'<div class="dup">No extraction warnings.</div>'}
+    ${bars?'<h4 style="margin-top:12px">Topic frequency (unique papers)</h4>'+bars:''}`;
+}
+function loadProviders(){
+  fetch('/api/providers').then(r=>r.json()).then(p=>{
+    const f=(n,o)=>`<b class="${o.configured&&!o.invalid_keys?'prov-ok':'prov-no'}">${n}: ${o.configured?(o.invalid_keys?'key rejected':'ready'):'not configured'}</b>`;
+    document.getElementById('providerStatus').innerHTML='AI providers — '+f('Groq',p.groq)+' · '+f('Gemini',p.gemini)+' · local text extraction always on';
+  }).catch(()=>{});
+}
+loadProviders();
 function resetApp(){
   files=[];lastData=null;renderFiles();updateBtn();
   document.getElementById('uploadWrap').style.display='grid';
@@ -1536,6 +1588,8 @@ const ERR_TITLES = {
   CORRUPTED_PDF:'Couldn\u2019t open this PDF', EMPTY_PDF:'This PDF is empty',
   SCANNED_NO_TEXT:'Couldn\u2019t read this PDF', MIN_READABLE_FILES:'Need more readable papers',
   SERVER_ERROR:'Something went wrong', NETWORK:'Connection problem',
+  NOT_ENOUGH_UNIQUE:'Need 2 different papers', FILE_TOO_LARGE:'File too large', NO_QUESTIONS:'No questions found',
+  NO_OCR_PROVIDER:'OCR needs an AI key', NETWORK_ERROR:'AI service unreachable', GEMINI_AUTH:'Gemini key rejected', NO_DATA:'Nothing to export',
   RATE_LIMITED:'AI is busy \u2014 try again shortly', GROQ_AUTH:'Service unavailable', AI_UNAVAILABLE:'AI service unavailable'
 };
 // smallpdf is mentioned only as a last-resort, optional hint for the one

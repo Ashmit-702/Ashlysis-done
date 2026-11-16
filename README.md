@@ -1,9 +1,12 @@
 # ASHLYSIS — Powered by Groq (free tier)
 
-## Render environment variables
-- `GROQ_API_KEY` (first key), `GROQ_API_KEY_2`, `GROQ_API_KEY_3` ... up to `GROQ_API_KEY_20`
-- or one variable `GROQ_API_KEYS` = comma-separated keys
-- Optional: `GROQ_TEXT_MODEL` (default `openai/gpt-oss-120b`), `GROQ_VISION_MODEL` (default `qwen/qwen3.6-27b`)
+## Render environment variables (both AI providers are optional)
+- `GROQ_API_KEY` (+ optional `GROQ_API_KEY_2`, `_3`... or `GROQ_API_KEYS=a,b`) — Groq text + vision
+- `GEMINI_API_KEY` — Gemini PDF understanding + text
+- Optional model overrides: `GROQ_TEXT_MODEL`, `GROQ_VISION_MODEL`, `GEMINI_MODEL`
+
+Local run: `pip install -r requirements.txt && cp .env.example .env` (fill keys, export them) then `python app.py`.
+Tests: `python tests/test_ashlysis.py` (AI calls are mocked).
 
 ## Deploy on Render
 
